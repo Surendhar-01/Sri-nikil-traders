@@ -1,0 +1,109 @@
+import React, { useState } from 'react';
+import Sidebar from './components/Sidebar';
+import Topbar from './components/Topbar';
+import Dashboard from './components/pages/Dashboard';
+import Billing from './components/pages/Billing';
+import Products from './components/pages/Products';
+import Stock from './components/pages/Stock';
+import Pricing from './components/pages/Pricing';
+import PriceBoard from './components/pages/PriceBoard';
+import Sales from './components/pages/Sales';
+import Customers from './components/pages/Customers';
+import Suppliers from './components/pages/Suppliers';
+import Expenses from './components/pages/Expenses';
+import Reports from './components/pages/Reports';
+import LoginActivity from './components/pages/LoginActivity';
+import Settings from './components/pages/Settings';
+import Login from './components/Login';
+import { useERPData } from './hooks/useERPData';
+
+function App() {
+  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('sri_nikil_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('sri_nikil_user') !== null;
+  });
+  const [session, setSession] = useState(null);
+  
+  const erp = useERPData();
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+    setIsLoggedIn(true);
+    localStorage.setItem('sri_nikil_user', JSON.stringify(userData));
+    
+    const newSession = {
+      id: erp.db.loginLogs.length > 0 ? Math.max(...erp.db.loginLogs.map(item => item.id)) + 1 : 1,
+      user: userData.user,
+      role: userData.role,
+      loginTime: new Date().toISOString(),
+      logoutTime: null,
+      device: navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'
+    };
+    setSession(newSession);
+    erp.addLoginLog(newSession);
+  };
+
+  const handleLogout = () => {
+    if (session) {
+      erp.updateLoginLog(session.id, new Date().toISOString());
+    }
+    setUser(null);
+    setIsLoggedIn(false);
+    setSession(null);
+    localStorage.removeItem('sri_nikil_user');
+  };
+
+  if (!erp || !erp.db) {
+    return <div className="loading">Initializing System...</div>;
+  }
+
+  if (!isLoggedIn) {
+    return <Login onLogin={handleLogin} accounts={erp.db.accounts || []} />;
+  }
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'dashboard': return <Dashboard db={erp.db} />;
+      case 'billing': return <Billing erp={erp} user={user} />;
+      case 'products': return <Products db={erp.db} erp={erp} />;
+      case 'stock': return <Stock db={erp.db} erp={erp} />;
+      case 'pricing': return <Pricing db={erp.db} erp={erp} user={user} />;
+      case 'priceboard': return <PriceBoard db={erp.db} />;
+      case 'sales': return <Sales db={erp.db} />;
+      case 'customers': return <Customers db={erp.db} />;
+      case 'suppliers': return <Suppliers db={erp.db} erp={erp} user={user} />;
+      case 'expenses': return <Expenses db={erp.db} erp={erp} user={user} />;
+      case 'reports': return <Reports db={erp.db} />;
+      case 'loginlog': return <LoginActivity db={erp.db} />;
+      case 'settings': return <Settings db={erp.db} erp={erp} user={user} />;
+      default: return <Dashboard db={erp.db} />;
+    }
+  };
+
+  return (
+    <div className="flex bg">
+      <Sidebar 
+        currentPage={currentPage} 
+        setCurrentPage={setCurrentPage} 
+        user={user} 
+        onLogout={handleLogout} 
+      />
+      <div className="main flex-1">
+        <Topbar 
+          title={currentPage.charAt(0).toUpperCase() + currentPage.slice(1)} 
+          user={user} 
+          db={erp.db}
+        />
+        <div className="content">
+          {renderPage()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
