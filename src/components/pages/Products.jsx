@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function Products({ db, erp }) {
   const [showModal, setShowModal] = useState(false);
   const [newProd, setNewProd] = useState({ code: '', name: '', cat: 'Groundnut', unit: 'tins', price: '', stock: '' });
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setShowModal(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
   const handleAdd = () => {
     if (!newProd.name || !newProd.price) return;
     const products = [...db.products, {
@@ -23,53 +30,71 @@ export default function Products({ db, erp }) {
     }
   };
 
+  const getEmoji = (cat) => {
+    if(cat.includes('Groundnut')) return '🥜';
+    if(cat.includes('Sunflower')) return '🌻';
+    if(cat.includes('Coconut')) return '🥥';
+    if(cat.includes('Palm')) return '🌴';
+    if(cat.includes('Sesame')) return '🪔';
+    if(cat.includes('Castor')) return '🌿';
+    return '📦';
+  };
+
   return (
-    <div className="card">
+    <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="section-title" style={{ margin: 0 }}>📦 Product Catalog</h2>
+        <h2 className="section-title" style={{ margin: 0 }}>🛍️ Product Catalog (Store View)</h2>
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>Add Product +</button>
       </div>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Code</th><th>Name</th><th>Category</th><th>Price (₹)</th><th>Stock</th><th>Status</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            {db.products.map(p => (
-              <tr key={p.id}>
-                <td className="fw-bold text-accent">{p.code}</td>
-                <td className="text-sm">{p.name}</td>
-                <td>{p.cat}</td>
-                <td className="fw-bold">{p.price.toFixed(2)}</td>
-                <td>{p.stock} {p.unit}</td>
-                <td>
-                  {p.stock === 0 ? <span className="badge badge-red">Out</span> : 
-                   p.stock <= 5 ? <span className="badge badge-orange">Low</span> : 
-                   <span className="badge badge-green">OK</span>}
-                </td>
-                <td>
-                  <button className="text-red" onClick={() => deleteProd(p.id)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+      <div className="product-grid">
+        {db.products.map(p => (
+          <div key={p.id} className="flipkart-card">
+            <div className="fc-image-box">
+              <span className="fc-category-icon">{getEmoji(p.cat)}</span>
+              {p.stock <= 5 && p.stock > 0 && <span className="fc-badge orange">Only {p.stock} left</span>}
+              {p.stock === 0 && <span className="fc-badge red">Out of Stock</span>}
+            </div>
+            <div className="fc-details">
+              <div className="fc-brand">{p.cat}</div>
+              <div className="fc-title">{p.name}</div>
+              <div className="fc-price-row">
+                <span className="fc-price">₹{p.price.toFixed(2)}</span>
+                <span className="fc-mrp">₹{(p.price * 1.1).toFixed(2)}</span>
+                <span className="fc-discount">10% off</span>
+              </div>
+              <div className="fc-meta">
+                <span className="text-xs text-muted">ID: {p.code}</span>
+                <span className={`text-xs fw-bold ${p.stock > 10 ? 'text-green' : 'text-red'}`}>
+                  {p.stock > 0 ? `${p.stock} in stock` : 'Unavailable'}
+                </span>
+              </div>
+              <button className="fc-delete-btn" onClick={() => deleteProd(p.id)}>Delete Product</button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {showModal && (
-        <div className="modal-overlay open">
-          <div className="modal">
-            <div className="modal-header"><h3>Add New Product</h3><button onClick={() => setShowModal(false)}>✕</button></div>
-            <div className="form-group mb-3"><label>Product Name</label><input value={newProd.name} onChange={e=>setNewProd({...newProd, name: e.target.value})} /></div>
+        <div className="modal-overlay open" onClick={() => setShowModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ marginBottom: '15px' }}>
+              <h3 style={{ margin: 0 }}>Add New Product</h3>
+              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+            </div>
+            <div className="form-group mb-3"><label>Product Name</label><input value={newProd.name} onChange={e=>setNewProd({...newProd, name: e.target.value})} autoFocus /></div>
             <div className="form-row mb-3">
               <div className="form-group"><label>Code</label><input value={newProd.code} onChange={e=>setNewProd({...newProd, code: e.target.value})} /></div>
-              <div className="form-group"><label>Category</label><select value={newProd.cat} onChange={e=>setNewProd({...newProd, cat: e.target.value})}><option>Groundnut</option><option>Sunflower</option><option>Palm</option><option>Sesame</option><option>Coconut</option></select></div>
+              <div className="form-group"><label>Category</label><select value={newProd.cat} onChange={e=>setNewProd({...newProd, cat: e.target.value})}><option>Groundnut</option><option>Sunflower</option><option>Palm</option><option>Vanaspati</option><option>Sesame</option><option>Castor</option><option>Coconut</option></select></div>
             </div>
             <div className="form-row mb-4">
               <div className="form-group"><label>Price</label><input type="number" value={newProd.price} onChange={e=>setNewProd({...newProd, price: e.target.value})} /></div>
               <div className="form-group"><label>Initial Stock</label><input type="number" value={newProd.stock} onChange={e=>setNewProd({...newProd, stock: e.target.value})} /></div>
             </div>
-            <button className="btn btn-primary btn-full" onClick={handleAdd}>Save Product</button>
+            <div className="flex gap-2 mt-2">
+              <button className="btn btn-primary flex-1" onClick={handleAdd}>Save Product</button>
+              <button className="btn btn-secondary" onClick={() => setShowModal(false)} style={{ padding: '8px 24px' }}>Close</button>
+            </div>
           </div>
         </div>
       )}

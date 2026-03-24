@@ -22,7 +22,10 @@ export default function Login({ onLogin, accounts }) {
 
   return (
     <div id="loginPage">
-      <div className="login-logo">🛢️ Sri Nikil Tradings</div>
+      <div className="login-logo gold-text" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+        <img src="/logo.svg" alt="Logo" style={{ height: '40px' }} />
+        Sri Nikil Tradings
+      </div>
       <div className="login-sub">
         058/1, Bhavani Main Road, Opp. Central Warehouse, Erode – 638004<br />
         GSTIN: 33AMCPD1118L1ZK &nbsp;|&nbsp; FSSAI: 12424007000946<br />

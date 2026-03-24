@@ -5,7 +5,10 @@ export default function PriceBoard({ db }) {
     <div className="price-board">
       <div className="flex justify-between items-end mb-4">
         <div>
-          <h2 style={{ margin: 0 }}>🛢️ Today's Oil Prices</h2>
+          <h2 className="gold-text" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <img src="/logo.svg" alt="Logo" style={{ height: '36px' }} />
+            Today's Oil Prices
+          </h2>
           <div style={{ color: 'var(--accent)', fontSize: '.9rem' }}>Market rates updated live</div>
         </div>
         <div style={{ fontSize: '.8rem', color: 'var(--text3)' }}>{new Date().toLocaleString()}</div>

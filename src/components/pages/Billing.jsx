@@ -1,10 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function Billing({ erp, user }) {
   const [items, setItems] = useState([]);
+  const [viewBill, setViewBill] = useState(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setViewBill(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [qty, setQty] = useState(1);
-  const [customer, setCustomer] = useState('Walk-in');
+  const [customer, setCustomer] = useState('');
   const [phone, setPhone] = useState('');
   const [payment, setPayment] = useState('Cash');
 
@@ -40,6 +50,8 @@ export default function Billing({ erp, user }) {
 
   const handleSaveBill = () => {
     if (items.length === 0) return alert('Cart is empty!');
+    if (!customer.trim()) return alert('Please enter Customer Name!');
+    if (!phone.trim() || phone.length < 10) return alert('Valid 10-digit Mobile Number is required!');
     const bill = {
       id: db.billSeq,
       billNo: `SNT-${String(db.billSeq).padStart(4, '0')}`,
@@ -59,25 +71,60 @@ export default function Billing({ erp, user }) {
     setItems([]);
   };
 
-  const downloadPDF = () => {
+  const printBill = () => {
     if (items.length === 0) return alert('No items to print!');
+    if (!customer.trim()) return alert('Please enter Customer Name!');
+    if (!phone.trim() || phone.length < 10) return alert('Valid 10-digit Mobile Number is required!');
     const s = db.settings;
-    const html = `<!DOCTYPE html><html><head><style>body{font-family:Arial;margin:20px}h2{text-align:center;color:#f97316}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px;font-size:12px}th{background:#f5f5f5}.total{text-align:right}.grand{font-weight:bold;font-size:14px}</style></head><body>
-    <h2>${s.shop}</h2><p style="text-align:center">${s.addr}<br>GSTIN: ${s.gstin} | FSSAI: ${s.fssai} | Ph: ${s.phone}</p>
-    <hr><table style="width:100%;border:none;margin-bottom:10px"><tr><td><b>Bill No:</b> SNT-${db.billSeq}</td><td style="text-align:right"><b>Date:</b> ${new Date().toLocaleString()}</td></tr>
-    <tr><td><b>Customer:</b> ${customer}</td><td style="text-align:right"><b>Payment:</b> ${payment}</td></tr></table>
-    <table><tr><th>#</th><th>Product</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
-    ${items.map((i, n) => `<tr><td>${n + 1}</td><td>${i.name}</td><td>${i.qty}</td><td>₹${i.price}</td><td>₹${i.total}</td></tr>`).join('')}
-    <tr><td colspan="4" class="total">Subtotal</td><td>₹${netSubtotal.toFixed(2)}</td></tr>
-    <tr><td colspan="4" class="total">CGST @2.5%</td><td>₹${(gstAmt/2).toFixed(2)}</td></tr>
-    <tr><td colspan="4" class="total">SGST @2.5%</td><td>₹${(gstAmt/2).toFixed(2)}</td></tr>
-    <tr class="grand"><td colspan="4" class="total">GRAND TOTAL</td><td>₹${grandTotal.toFixed(2)}</td></tr>
-    </table><br><p style="text-align:center">Thank you for your purchase!</p></body></html>`;
-    const blob = new Blob([html], { type: 'text/html' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `Bill_${db.billSeq}.html`;
-    a.click();
+    
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: 'Ubuntu', sans-serif; width: 300px; margin: 0 auto; padding: 10px; color: #000; font-size: 13px; line-height: 1.4; }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .title { font-size: 18px; margin-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; }
+    th, td { padding: 4px 0; border-bottom: 1px dashed #ccc; font-size: 12px; }
+    th { text-align: left; }
+    .right { text-align: right; border-bottom: none; }
+    td.right, th.right { border-bottom: 1px dashed #ccc; }
+    .totals { border-top: 2px dashed #000; padding-top: 5px; margin-top: 10px; }
+    .grand { font-size: 15px; font-weight: bold; margin-top: 4px; }
+    .divider { border-bottom: 1px dashed #000; margin: 10px 0; }
+    @media print {
+      body { width: 100%; margin: 0; padding: 0; }
+      @page { margin: 0; }
+    }
+  </style>
+</head>
+<body onload="setTimeout(() => { window.print(); window.close(); }, 300)">
+  <div class="center bold title">${s.shop}</div>
+  <div class="center">${s.addr}</div>
+  <div class="center">Ph: ${s.phone}</div>
+  <div class="divider"></div>
+  <div><b>Bill No:</b> SNT-${String(db.billSeq).padStart(4, '0')}</div>
+  <div><b>Date:</b> ${new Date().toLocaleString()}</div>
+  <div><b>Customer:</b> ${customer}</div>
+  <div class="divider"></div>
+  <table>
+    <tr><th>Item</th><th class="right">Qty</th><th class="right">Rate</th><th class="right">Amt</th></tr>
+    ${items.map(i => `<tr><td>${i.name.split(' ').slice(0, 3).join(' ')}</td><td class="right">${i.qty}</td><td class="right">${i.price}</td><td class="right">${i.total}</td></tr>`).join('')}
+  </table>
+  <div class="totals">
+    <div style="display:flex; justify-content:space-between"><span>Subtotal:</span><span>₹${netSubtotal.toFixed(2)}</span></div>
+    <div style="display:flex; justify-content:space-between"><span>GST:</span><span>₹${gstAmt.toFixed(2)}</span></div>
+    <div style="display:flex; justify-content:space-between" class="grand"><span>TOTAL:</span><span>₹${grandTotal.toFixed(2)}</span></div>
+  </div>
+  <div class="divider"></div>
+  <div class="center bold">Thank You! Visit Again</div>
+</body>
+</html>`;
+
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    printWindow.document.write(html);
+    printWindow.document.close();
   };
 
   return (
@@ -85,7 +132,10 @@ export default function Billing({ erp, user }) {
       <div className="flex-1">
         <div className="card mb-4 no-print">
           <div className="bill-header">
-            <div className="bill-shop-name">🛢️ {db.settings.shop}</div>
+            <div className="bill-shop-name gold-text" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <img src="/logo.svg" alt="Logo" style={{ height: '32px' }} />
+              {db.settings.shop}
+            </div>
             <div className="bill-address">{db.settings.addr}<br/>Ph: {db.settings.phone}</div>
           </div>
           <div className="form-row mb-3">
@@ -98,8 +148,8 @@ export default function Billing({ erp, user }) {
             </div>
           </div>
           <div className="form-row">
-            <div className="form-group"><label>Customer Name</label><input value={customer} onChange={e=>setCustomer(e.target.value)} /></div>
-            <div className="form-group"><label>Phone</label><input value={phone} onChange={e=>setPhone(e.target.value)} maxLength="10" /></div>
+            <div className="form-group"><label>Customer Name <span className="text-red" title="Required">*</span></label><input value={customer} onChange={e=>setCustomer(e.target.value)} placeholder="Required" /></div>
+            <div className="form-group"><label>Mobile No <span className="text-red" title="Required">*</span></label><input value={phone} onChange={e=>setPhone(e.target.value.replace(/\\D/g, '').slice(0, 10))} maxLength="10" placeholder="10 Digits Required" /></div>
           </div>
         </div>
 
@@ -148,7 +198,13 @@ export default function Billing({ erp, user }) {
                         <td style={{ fontSize: '.8rem' }}>{item.name}</td>
                         <td>{item.qty}</td>
                         <td>₹{item.total}</td>
-                        <td><button className="text-red" onClick={() => removeItem(idx)}>✕</button></td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button className="del-btn" onClick={() => removeItem(idx)} title="Remove Item">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 01 2-2h4a2 2 0 01 2 2v2M10 11v6M14 11v6"></path>
+                            </svg>
+                          </button>
+                        </td>
                       </tr>
                     ))}
                  </tbody>
@@ -161,7 +217,7 @@ export default function Billing({ erp, user }) {
              </div>
              <div className="mt-4 flex gap-2">
                 <button className="btn btn-primary flex-1" onClick={handleSaveBill}>💾 Save Bill</button>
-                <button className="btn btn-blue" onClick={downloadPDF}>⬇️ PDF</button>
+                <button className="btn btn-blue" onClick={printBill}>🖨️ Print</button>
                 <button className="btn btn-danger" onClick={() => setItems([])}>🗑️</button>
              </div>
           </div>
@@ -172,10 +228,15 @@ export default function Billing({ erp, user }) {
         <div className="section-title">🕒 Recent Bills</div>
         <div className="flex flex-column gap-2" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
           {db.bills.slice(0, 10).map(bill => (
-            <div key={bill.id} className="card bg3 border-radius mb-1" style={{ padding: '10px' }}>
-              <div className="flex justify-between mb-1">
+            <div key={bill.id} className="card bg3 border-radius mb-1" style={{ padding: '10px', cursor: 'pointer', transition: '0.2s', border: '1px solid var(--border)' }} onClick={() => setViewBill(bill)} title="Click to view details">
+              <div className="flex justify-between items-center mb-1">
                 <b className="text-accent text-sm">{bill.billNo}</b>
-                <span className="text-xs text-muted">{new Date(bill.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted">{new Date(bill.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  <button className="del-btn" style={{ padding: '2px', color: 'var(--red)', width: 'auto', height: 'auto' }} onClick={(e) => { e.stopPropagation(); if(confirm('Are you sure you want to completely delete this bill? Stock quantities will be reverted.')) erp.deleteBill(bill.id); }} title="Delete Bill">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 01 2-2h4a2 2 0 01 2 2v2M10 11v6M14 11v6"></path></svg>
+                  </button>
+                </div>
               </div>
               <div className="text-sm fw-600">{bill.customer}</div>
               <div className="flex justify-between mt-2">
@@ -187,6 +248,64 @@ export default function Billing({ erp, user }) {
           {db.bills.length === 0 && <div className="text-center text-muted text-sm mt-4">No recent bills</div>}
         </div>
       </div>
+
+      {viewBill && (
+        <div className="modal-overlay open" onClick={() => setViewBill(null)} style={{ padding: '20px' }}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-header" style={{ marginBottom: '15px' }}>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, color: 'var(--text)' }}>Bill Details</h3>
+                <div style={{ fontSize: '0.9rem', color: 'var(--accent)', fontWeight: 600 }}>{viewBill.billNo}</div>
+              </div>
+              <button className="modal-close" onClick={() => setViewBill(null)}>✕</button>
+            </div>
+            
+            <div style={{ paddingBottom: '15px', borderBottom: '1px solid var(--border)', marginBottom: '15px' }}>
+               <div className="grid grid-2 text-sm" style={{ gap: '8px' }}>
+                 <div><span className="text-muted">Date:</span> <b>{new Date(viewBill.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</b></div>
+                 <div><span className="text-muted">Customer:</span> <b>{viewBill.customer}</b></div>
+                 <div><span className="text-muted">Phone:</span> <b>{viewBill.phone || 'N/A'}</b></div>
+                 <div><span className="text-muted">Payment:</span> <span className="badge badge-green">{viewBill.payment}</span></div>
+                 <div><span className="text-muted">Billed By:</span> <b>{viewBill.by || 'System'}</b></div>
+               </div>
+            </div>
+            
+            <div className="table-wrap mb-3" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+              <table>
+                 <thead>
+                   <tr>
+                     <th>Item</th>
+                     <th style={{ textAlign: 'right' }}>Qty</th>
+                     <th style={{ textAlign: 'right' }}>Rate</th>
+                     <th style={{ textAlign: 'right' }}>Total</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   {viewBill.items.map((i, idx) => (
+                     <tr key={idx}>
+                       <td>{i.name}</td>
+                       <td style={{ textAlign: 'right' }}>{i.qty}</td>
+                       <td style={{ textAlign: 'right' }}>₹{i.price.toFixed(2)}</td>
+                       <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{i.total.toFixed(2)}</td>
+                     </tr>
+                   ))}
+                 </tbody>
+              </table>
+            </div>
+            
+            <div className="totals-box mb-4">
+              <div className="total-row"><span>Subtotal:</span><span>₹{viewBill.subtotal.toFixed(2)}</span></div>
+              <div className="total-row"><span>CGST:</span><span>₹{viewBill.cgst.toFixed(2)}</span></div>
+              <div className="total-row"><span>SGST:</span><span>₹{viewBill.sgst.toFixed(2)}</span></div>
+              <div className="total-row grand"><span>Total:</span><span>₹{viewBill.grand.toFixed(2)}</span></div>
+            </div>
+
+            <div className="flex justify-end items-center mt-2">
+              <button className="btn btn-secondary" onClick={() => setViewBill(null)} style={{ padding: '8px 24px' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

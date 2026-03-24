@@ -3,7 +3,7 @@ import React from 'react';
 export default function Topbar({ title }) {
   return (
     <div className="topbar">
-      <div className="topbar-title">
+      <div className="topbar-title gold-text">
         {title.replace('-', ' ')}
       </div>
       <div className="topbar-right">
