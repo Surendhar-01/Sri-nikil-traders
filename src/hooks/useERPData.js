@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'sri_nikil_erp_db';
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 const defaultProducts = [
   { id: 1, code: 'GNR-15K', name: 'Groundnut Oil (Refined) 15kg Tin', cat: 'Groundnut', unit: 'tins', price: 2920, stock: 15, sold: 0, image: 'https://placehold.co/150x150?text=15kg+Tin' },
@@ -55,6 +55,7 @@ const defaultDb = {
   priceHistory: [],
   loginLogs: [],
   accounts: [
+    { user: 'admin', pass: 'admin123', role: 'Admin' },
     { user: 'staff', pass: 'staff123', role: 'Staff' }
   ],
   settings: {
@@ -80,11 +81,22 @@ function normalizeDb(data) {
   }));
 
   merged.accounts = incomingAccounts
-    .filter(account => account && account.user && account.user.toLowerCase() !== 'admin')
+    .filter(account => account && account.user)
     .map(account => ({
       ...account,
-      role: 'Staff'
+      role: account.role || (account.user?.toLowerCase() === 'admin' ? 'Admin' : 'Staff')
     }));
+
+  const requiredAccounts = [
+    { user: 'admin', pass: 'admin123', role: 'Admin' },
+    { user: 'staff', pass: 'staff123', role: 'Staff' }
+  ];
+
+  requiredAccounts.forEach(requiredAccount => {
+    if (!merged.accounts.some(account => account.user?.toLowerCase() === requiredAccount.user)) {
+      merged.accounts.push(requiredAccount);
+    }
+  });
 
   if (merged.accounts.length === 0) {
     merged.accounts = defaultDb.accounts;

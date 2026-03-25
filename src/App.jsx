@@ -82,35 +82,26 @@ function App() {
     return <div className="loading">Initializing System...</div>;
   }
 
-  const handleSignUp = (account) => {
-    const accounts = erp.db.accounts || [];
-    if (accounts.some(existing => existing.user === account.user)) {
-      return false;
-    }
-
-    erp.updateDb('accounts', [...accounts, account]);
-    return true;
-  };
-
   if (!isLoggedIn) {
-    return <Login onLogin={handleLogin} onSignUp={handleSignUp} accounts={erp.db.accounts || []} />;
+    return <Login onLogin={handleLogin} accounts={erp.db.accounts || []} />;
   }
 
   const renderPage = () => {
+    const isAdmin = user?.role === 'Admin';
     switch (currentPage) {
       case 'dashboard': return <Dashboard db={erp.db} />;
       case 'billing': return <Billing erp={erp} user={user} />;
       case 'products': return <Products db={erp.db} erp={erp} />;
       case 'stock': return <Stock db={erp.db} erp={erp} user={user} />;
-      case 'pricing': return <Pricing db={erp.db} erp={erp} user={user} />;
+      case 'pricing': return isAdmin ? <Pricing db={erp.db} erp={erp} user={user} /> : <Dashboard db={erp.db} />;
       case 'priceboard': return <PriceBoard db={erp.db} />;
-      case 'sales': return <Sales db={erp.db} />;
+      case 'sales': return isAdmin ? <Sales db={erp.db} /> : <Dashboard db={erp.db} />;
       case 'customers': return <Customers db={erp.db} />;
-      case 'suppliers': return <Suppliers db={erp.db} erp={erp} user={user} />;
-      case 'expenses': return <Expenses db={erp.db} erp={erp} user={user} />;
-      case 'reports': return <Reports db={erp.db} />;
-      case 'loginlog': return <LoginActivity db={erp.db} />;
-      case 'settings': return <Settings db={erp.db} erp={erp} user={user} />;
+      case 'suppliers': return isAdmin ? <Suppliers db={erp.db} erp={erp} user={user} /> : <Dashboard db={erp.db} />;
+      case 'expenses': return isAdmin ? <Expenses db={erp.db} erp={erp} user={user} /> : <Dashboard db={erp.db} />;
+      case 'reports': return isAdmin ? <Reports db={erp.db} /> : <Dashboard db={erp.db} />;
+      case 'loginlog': return isAdmin ? <LoginActivity db={erp.db} /> : <Dashboard db={erp.db} />;
+      case 'settings': return isAdmin ? <Settings db={erp.db} erp={erp} user={user} /> : <Dashboard db={erp.db} />;
       default: return <Dashboard db={erp.db} />;
     }
   };

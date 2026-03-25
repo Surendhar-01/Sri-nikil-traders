@@ -68,8 +68,12 @@ export default function Settings({ db, erp }) {
   };
 
   const deleteStaff = (username) => {
+    if (username === 'admin') {
+      return;
+    }
+
     if (db.accounts.length <= 1) {
-      alert('At least one staff account is required.');
+      alert('At least one account is required.');
       return;
     }
 
@@ -174,9 +178,15 @@ export default function Settings({ db, erp }) {
                 {db.accounts.map(account => (
                   <tr key={account.user}>
                     <td>{account.user}</td>
-                    <td><span className="badge badge-blue">Staff</span></td>
                     <td>
-                      <button className="text-red" onClick={() => deleteStaff(account.user)}>Delete</button>
+                      <span className={`badge ${account.role === 'Admin' ? 'badge-purple' : 'badge-blue'}`}>
+                        {account.role}
+                      </span>
+                    </td>
+                    <td>
+                      {account.user !== 'admin' && (
+                        <button className="text-red" onClick={() => deleteStaff(account.user)}>Delete</button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -223,6 +233,16 @@ export default function Settings({ db, erp }) {
                 value={newStaff.pass}
                 onChange={event => setNewStaff(prev => ({ ...prev, pass: event.target.value }))}
               />
+            </div>
+            <div className="form-group mb-4">
+              <label>Role</label>
+              <select
+                value={newStaff.role}
+                onChange={event => setNewStaff(prev => ({ ...prev, role: event.target.value }))}
+              >
+                <option>Staff</option>
+                <option>Admin</option>
+              </select>
             </div>
             <button className="btn btn-primary btn-full" onClick={addStaff}>Save Account</button>
           </div>
