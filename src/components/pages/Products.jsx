@@ -42,7 +42,7 @@ export default function Products({ db, erp }) {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center" style={{ marginBottom: '20px' }}>
         <h2 className="section-title" style={{ margin: 0 }}>🛍️ Product Catalog (Store View)</h2>
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>Add Product +</button>
       </div>

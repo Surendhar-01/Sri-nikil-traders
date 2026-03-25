@@ -1,55 +1,169 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 export default function Pricing({ db, erp, user }) {
-  const handleUpdate = (id, currentPrice) => {
-    const newPrice = prompt(`Update price for this product:`, currentPrice);
-    if (newPrice && !isNaN(newPrice)) {
-      erp.updateProductPrice(id, parseFloat(newPrice), user.user);
-      alert('Price updated!');
+  const [priceModal, setPriceModal] = useState(null);
+
+  useEffect(() => {
+    if (!priceModal) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setPriceModal(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [priceModal]);
+
+  const openPriceModal = (product) => {
+    setPriceModal({
+      id: product.id,
+      name: product.name,
+      currentPrice: product.price.toFixed(2),
+      newPrice: product.price.toFixed(2)
+    });
+  };
+
+  const handleSavePrice = () => {
+    if (!priceModal || Number.isNaN(Number(priceModal.newPrice))) {
+      return;
+    }
+
+    erp.updateProductPrice(priceModal.id, parseFloat(priceModal.newPrice), user.user);
+    setPriceModal(null);
+  };
+
+  const handleClearLog = () => {
+    if (!db.priceHistory.length) {
+      return;
+    }
+
+    if (confirm('Clear all price history log entries?')) {
+      erp.clearPriceHistory();
     }
   };
 
   return (
-    <div className="card">
-      <div className="section-title">💰 Price Control & History</div>
-      <div className="table-wrap mb-6">
-        <table>
-          <thead><tr><th>Product</th><th>Previous</th><th>Current</th><th>Trend</th><th>Action</th></tr></thead>
-          <tbody>
-            {db.products.map(p => {
-              const hist = db.priceHistory.find(h => h.product === p.name);
-              const prev = hist ? hist.old : p.price;
-              const trend = p.price > prev ? '↑' : p.price < prev ? '↓' : '-';
-              return (
-                <tr key={p.id}>
-                  <td><b>{p.name}</b></td>
-                  <td className="text-muted">₹{prev.toFixed(2)}</td>
-                  <td className="fw-bold text-accent">₹{p.price.toFixed(2)}</td>
-                  <td className={p.price > prev ? 'text-red' : 'text-green'}>{trend}</td>
-                  <td><button className="btn btn-sm btn-primary" onClick={() => handleUpdate(p.id, p.price)}>Update</button></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div className="section-title">📜 Price Change Log</div>
-      <div className="table-wrap">
-        <table>
-          <thead><tr><th>Date</th><th>Product</th><th>Old</th><th>New</th><th>By</th></tr></thead>
-          <tbody>
-            {db.priceHistory.map(h => (
-              <tr key={h.id}>
-                <td className="text-xs">{new Date(h.date).toLocaleDateString()}</td>
-                <td>{h.product}</td>
-                <td className="text-muted">₹{h.old.toFixed(2)}</td>
-                <td className="text-accent fw-bold">₹{h.new.toFixed(2)}</td>
-                <td className="text-xs">{h.by}</td>
+    <div>
+      <div className="card mb-4">
+        <div className="section-title">Price Control</div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Previous</th>
+                <th>Current</th>
+                <th>Trend</th>
+                <th>Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {db.products.map(product => {
+                const history = db.priceHistory.find(entry => entry.product === product.name);
+                const previous = history ? history.old : product.price;
+                const trend = product.price > previous ? '↑' : product.price < previous ? '↓' : '-';
+
+                return (
+                  <tr key={product.id}>
+                    <td><b>{product.name}</b></td>
+                    <td className="text-muted">₹{previous.toFixed(2)}</td>
+                    <td className="fw-bold text-accent">₹{product.price.toFixed(2)}</td>
+                    <td className={product.price > previous ? 'text-red' : 'text-green'}>{trend}</td>
+                    <td>
+                      <button className="btn btn-sm btn-primary" onClick={() => openPriceModal(product)}>Update</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      <div className="card">
+        <div className="flex justify-between items-center mb-3">
+          <div className="section-title" style={{ margin: 0 }}>Price Change Log</div>
+          <button className="btn btn-danger btn-sm" type="button" onClick={handleClearLog}>Clear All</button>
+        </div>
+
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Product</th>
+                <th>Old</th>
+                <th>New</th>
+                <th>By</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {db.priceHistory.map(history => (
+                <tr key={history.id}>
+                  <td className="text-xs">{new Date(history.date).toLocaleDateString('en-GB')}</td>
+                  <td>{history.product}</td>
+                  <td className="text-muted">₹{history.old.toFixed(2)}</td>
+                  <td className="text-accent fw-bold">₹{history.new.toFixed(2)}</td>
+                  <td className="text-xs">{history.by}</td>
+                  <td>
+                    <button
+                      className="del-btn"
+                      type="button"
+                      title="Delete log"
+                      onClick={() => erp.deletePriceHistory(history.id)}
+                    >
+                      🗑
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {db.priceHistory.length === 0 && (
+                <tr>
+                  <td colSpan="6" className="text-center text-muted">No price changes recorded</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {priceModal && (
+        <div className="modal-overlay open" onClick={() => setPriceModal(null)}>
+          <div className="modal" onClick={event => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Update Price</h3>
+              <button className="modal-close" type="button" onClick={() => setPriceModal(null)}>×</button>
+            </div>
+
+            <div className="form-group mb-3">
+              <label>Product Name</label>
+              <input value={priceModal.name} readOnly />
+            </div>
+
+            <div className="form-row mb-4">
+              <div className="form-group">
+                <label>Current Price</label>
+                <input value={priceModal.currentPrice} readOnly />
+              </div>
+              <div className="form-group">
+                <label>New Price</label>
+                <input
+                  type="number"
+                  value={priceModal.newPrice}
+                  onChange={event => setPriceModal({ ...priceModal, newPrice: event.target.value })}
+                />
+              </div>
+            </div>
+
+            <button className="btn btn-primary btn-full" type="button" onClick={handleSavePrice}>Save Price</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

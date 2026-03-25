@@ -1,40 +1,85 @@
 import React from 'react';
 
+function getTrendLabel(currentPrice, previousPrice) {
+  if (currentPrice > previousPrice) {
+    return 'UP';
+  }
+  if (currentPrice < previousPrice) {
+    return 'DOWN';
+  }
+  return 'STEADY';
+}
+
+function formatDate(date) {
+  return new Intl.DateTimeFormat('en-GB').format(date);
+}
+
+function formatTime(date) {
+  return new Intl.DateTimeFormat('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(date);
+}
+
 export default function PriceBoard({ db }) {
+  const now = new Date();
+
   return (
     <div className="price-board">
-      <div className="flex justify-between items-end mb-4">
-        <div>
-          <h2 className="gold-text" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <img src="/logo.svg" alt="Logo" style={{ height: '36px' }} />
-            Today's Oil Prices
-          </h2>
-          <div style={{ color: 'var(--accent)', fontSize: '.9rem' }}>Market rates updated live</div>
+      <div className="price-board-shell">
+        <div className="price-board-pills">
+          <span className="price-board-pill">Daily Oil Rates</span>
+          <span className="price-board-pill">Store Display Board</span>
+          <span className="price-board-pill">{formatDate(now)}</span>
         </div>
-        <div style={{ fontSize: '.8rem', color: 'var(--text3)' }}>{new Date().toLocaleString()}</div>
-      </div>
-      <div className="price-items" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-        {db.products.map(p => {
-          const hist = db.priceHistory.find(h => h.product === p.name);
-          const prev = hist ? hist.old : p.price;
-          return (
-            <div key={p.id} className="price-item" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-              <div className="flex justify-between w-full">
-                <div className="pname text-sm">{p.name}</div>
-                <span className={`badge ${p.price > prev ? 'badge-red' : 'badge-green'}`} style={{ fontSize: '.6rem' }}>
-                  {p.price > prev ? 'UP' : p.price < prev ? 'DOWN' : 'STABLE'}
-                </span>
-              </div>
-              <div className="flex items-end gap-2 mt-1">
-                <div className="pprice" style={{ fontSize: '1.8rem' }}>₹{p.price.toFixed(0)}</div>
-                {p.price !== prev && <div style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '.8rem', marginBottom: '4px' }}>₹{prev.toFixed(0)}</div>}
-              </div>
+
+        <div className="price-board-hero">
+          <div className="price-board-copy">
+            <div className="price-board-kicker">Sri Nikil Tradings</div>
+            <h2 className="price-board-title">Today's Price Board</h2>
+            <div className="price-board-subtitle">
+              Clear, customer-friendly oil pricing designed for quick viewing at the counter.
             </div>
-          );
-        })}
-      </div>
-      <div className="mt-4 p-3 bg3 border-radius text-center text-sm">
-        Premium Quality Oil. Direct from Manufacturer.
+          </div>
+
+          <div className="price-board-update-card">
+            <div className="price-board-update-label">Last Updated</div>
+            <div className="price-board-update-date">{formatDate(now)}</div>
+            <div className="price-board-update-time">{formatTime(now)}</div>
+          </div>
+        </div>
+
+        <div className="price-items price-board-grid">
+          {db.products.map((product, index) => {
+            const history = db.priceHistory.find(entry => entry.product === product.name);
+            const previousPrice = history ? history.old : product.price;
+            const trendLabel = getTrendLabel(product.price, previousPrice);
+
+            return (
+              <div key={product.id} className="price-card">
+                <div className="price-card-top">
+                  <div className="price-card-index">{String(index + 1).padStart(2, '0')}</div>
+                  <div className={`price-card-status ${trendLabel.toLowerCase()}`}>{trendLabel}</div>
+                </div>
+
+                <div className="price-card-name">{product.name}</div>
+
+                <div className="price-card-price-wrap">
+                  <div className="price-card-price">Rs.{product.price.toFixed(0)}</div>
+                  {product.price !== previousPrice ? (
+                    <div className="price-card-old-price">Rs.{previousPrice.toFixed(0)}</div>
+                  ) : null}
+                </div>
+
+                <div className="price-card-bottom">
+                  <div className="price-card-unit">{product.unit.toUpperCase()}</div>
+                  <div className="price-card-dot">.</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
