@@ -271,6 +271,38 @@ async function loadErpData() {
   };
 }
 
+function buildBillNumber(sequence) {
+  return `SNT-${String(sequence).padStart(4, '0')}`;
+}
+
+async function getSettingsRow(connection) {
+  const [rows] = await connection.query(`
+    SELECT id, bill_seq
+    FROM settings
+    ORDER BY id
+    LIMIT 1
+  `);
+
+  return rows[0] || null;
+}
+
+async function getProductMap(connection, productIds) {
+  if (!productIds.length) {
+    return new Map();
+  }
+
+  const [rows] = await connection.query(
+    `
+      SELECT id, name, price, stock, sold
+      FROM products
+      WHERE id IN (?)
+    `,
+    [productIds]
+  );
+
+  return new Map(rows.map(row => [Number(row.id), row]));
+}
+
 app.get('/api/erp-data', async (_request, response) => {
   try {
     const data = await loadErpData();
@@ -281,6 +313,222 @@ app.get('/api/erp-data', async (_request, response) => {
       message: 'Failed to load ERP data from MySQL.',
       error: error.message
     });
+  }
+});
+
+app.get('/api/db', async (_request, response) => {
+  try {
+    const data = await loadErpData();
+    response.json(data);
+  } catch (error) {
+    console.error('Failed to load ERP data from MySQL', error);
+    response.status(500).json({
+      message: 'Failed to load ERP data from MySQL.',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/bills', async (request, response) => {
+  const {
+    customer,
+    phone,
+    payment,
+    items,
+    subtotal,
+    cgst,
+    sgst,
+    grand,
+    by_user: byUser
+  } = request.body || {};
+
+  if (!customer?.trim()) {
+    return response.status(400).json({ message: 'Customer name is required.' });
+  }
+
+  if (!phone?.trim()) {
+    return response.status(400).json({ message: 'Phone number is required.' });
+  }
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return response.status(400).json({ message: 'At least one bill item is required.' });
+  }
+
+  const normalizedItems = items.map(item => ({
+    id: Number(item.id),
+    name: String(item.name || '').trim(),
+    qty: Number(item.qty),
+    price: numberValue(item.price),
+    total: numberValue(item.total)
+  }));
+
+  if (normalizedItems.some(item => !item.id || !item.name || item.qty <= 0 || item.price < 0 || item.total < 0)) {
+    return response.status(400).json({ message: 'Bill contains invalid item data.' });
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const settingsRow = await getSettingsRow(connection);
+    if (!settingsRow) {
+      throw new Error('Settings row not found.');
+    }
+
+    const currentBillSeq = Number(settingsRow.bill_seq || 1000);
+    const billNo = buildBillNumber(currentBillSeq);
+    const productIds = [...new Set(normalizedItems.map(item => item.id))];
+    const productMap = await getProductMap(connection, productIds);
+
+    if (productMap.size !== productIds.length) {
+      throw new Error('One or more products were not found.');
+    }
+
+    for (const item of normalizedItems) {
+      const product = productMap.get(item.id);
+      if (!product) {
+        throw new Error(`Product ${item.id} was not found.`);
+      }
+
+      if (Number(product.stock) < item.qty) {
+        throw new Error(`${product.name} has insufficient stock.`);
+      }
+    }
+
+    const [billResult] = await connection.query(
+      `
+        INSERT INTO bills (
+          bill_no,
+          bill_date,
+          customer_name,
+          phone,
+          payment_method,
+          subtotal,
+          cgst,
+          sgst,
+          grand_total,
+          created_by
+        )
+        VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        billNo,
+        customer.trim(),
+        phone.trim(),
+        String(payment || 'Cash'),
+        numberValue(subtotal),
+        numberValue(cgst),
+        numberValue(sgst),
+        numberValue(grand),
+        String(byUser || 'staff')
+      ]
+    );
+
+    const billId = Number(billResult.insertId);
+
+    for (const item of normalizedItems) {
+      await connection.query(
+        `
+          INSERT INTO bill_items (
+            bill_id,
+            product_id,
+            product_name,
+            qty,
+            price,
+            total
+          )
+          VALUES (?, ?, ?, ?, ?, ?)
+        `,
+        [
+          billId,
+          item.id,
+          item.name,
+          item.qty,
+          item.price,
+          item.total
+        ]
+      );
+
+      await connection.query(
+        `
+          UPDATE products
+          SET stock = stock - ?, sold = sold + ?
+          WHERE id = ?
+        `,
+        [item.qty, item.qty, item.id]
+      );
+    }
+
+    const [customerRows] = await connection.query(
+      `
+        SELECT id, visits, total_amount
+        FROM customers
+        WHERE phone = ?
+        LIMIT 1
+      `,
+      [phone.trim()]
+    );
+
+    if (customerRows.length > 0) {
+      const existingCustomer = customerRows[0];
+      await connection.query(
+        `
+          UPDATE customers
+          SET
+            name = ?,
+            visits = ?,
+            total_amount = ?,
+            last_visit = NOW()
+          WHERE id = ?
+        `,
+        [
+          customer.trim(),
+          Number(existingCustomer.visits || 0) + 1,
+          numberValue(existingCustomer.total_amount) + numberValue(grand),
+          existingCustomer.id
+        ]
+      );
+    } else {
+      await connection.query(
+        `
+          INSERT INTO customers (
+            name,
+            phone,
+            visits,
+            total_amount,
+            first_visit,
+            last_visit
+          )
+          VALUES (?, ?, ?, ?, NOW(), NOW())
+        `,
+        [customer.trim(), phone.trim(), 1, numberValue(grand)]
+      );
+    }
+
+    await connection.query(
+      `
+        UPDATE settings
+        SET bill_seq = ?
+        WHERE id = ?
+      `,
+      [currentBillSeq + 1, settingsRow.id]
+    );
+
+    await connection.commit();
+
+    response.status(201).json({
+      id: billId,
+      billNo
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Failed to save bill', error);
+    response.status(500).json({
+      message: error.message || 'Failed to save bill.'
+    });
+  } finally {
+    connection.release();
   }
 });
 

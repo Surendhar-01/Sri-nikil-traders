@@ -27,22 +27,30 @@ export default function Pricing({ db, erp, user }) {
     });
   };
 
-  const handleSavePrice = () => {
+  const handleSavePrice = async () => {
     if (!priceModal || Number.isNaN(Number(priceModal.newPrice))) {
       return;
     }
 
-    erp.updateProductPrice(priceModal.id, parseFloat(priceModal.newPrice), user.user);
-    setPriceModal(null);
+    try {
+      await erp.updateProductPrice(priceModal.id, parseFloat(priceModal.newPrice), user.user);
+      setPriceModal(null);
+    } catch (error) {
+      alert(error.message || 'Failed to update price');
+    }
   };
 
-  const handleClearLog = () => {
+  const handleClearLog = async () => {
     if (!db.priceHistory.length) {
       return;
     }
 
     if (confirm('Clear all price history log entries?')) {
-      erp.clearPriceHistory();
+      try {
+        await erp.clearPriceHistory();
+      } catch (error) {
+        alert(error.message || 'Failed to clear price history');
+      }
     }
   };
 
@@ -115,7 +123,13 @@ export default function Pricing({ db, erp, user }) {
                       className="del-btn"
                       type="button"
                       title="Delete log"
-                      onClick={() => erp.deletePriceHistory(history.id)}
+                      onClick={async () => {
+                        try {
+                          await erp.deletePriceHistory(history.id);
+                        } catch (error) {
+                          alert(error.message || 'Failed to delete log');
+                        }
+                      }}
                     >
                       🗑
                     </button>

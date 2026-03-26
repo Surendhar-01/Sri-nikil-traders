@@ -11,22 +11,29 @@ export default function Products({ db, erp }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newProd.name || !newProd.price) return;
-    const products = [...db.products, {
-      ...newProd,
-      id: Date.now(),
-      price: parseFloat(newProd.price),
-      stock: parseInt(newProd.stock) || 0,
-      sold: 0
-    }];
-    erp.updateDb('products', products);
-    setShowModal(false);
+
+    try {
+      await erp.addProduct({
+        ...newProd,
+        price: parseFloat(newProd.price),
+        stock: parseInt(newProd.stock, 10) || 0
+      });
+      setShowModal(false);
+      setNewProd({ code: '', name: '', cat: 'Groundnut', unit: 'tins', price: '', stock: '' });
+    } catch (error) {
+      alert(error.message || 'Failed to add product');
+    }
   };
 
-  const deleteProd = (id) => {
+  const deleteProd = async (id) => {
     if (confirm('Delete product?')) {
-      erp.updateDb('products', db.products.filter(p => p.id !== id));
+      try {
+        await erp.deleteProduct(id);
+      } catch (error) {
+        alert(error.message || 'Failed to delete product');
+      }
     }
   };
 

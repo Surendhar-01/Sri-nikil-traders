@@ -50,7 +50,8 @@ function App() {
     };
   }, []);
 
-  const handleLogin = (userData) => {
+  const handleLogin = async (username, password) => {
+    const userData = await erp.login(username, password);
     setUser(userData);
     setIsLoggedIn(true);
     setCurrentPage('dashboard');
@@ -64,13 +65,13 @@ function App() {
       logoutTime: null,
       device: navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'
     };
-    setSession(newSession);
-    erp.addLoginLog(newSession);
+    const createdLog = await erp.addLoginLog(newSession);
+    setSession({ ...newSession, id: createdLog.id });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (session) {
-      erp.updateLoginLog(session.id, new Date().toISOString());
+      await erp.updateLoginLog(session.id);
     }
     setUser(null);
     setIsLoggedIn(false);
@@ -83,7 +84,7 @@ function App() {
   }
 
   if (!isLoggedIn) {
-    return <Login onLogin={handleLogin} accounts={erp.db.accounts || []} />;
+    return <Login onLogin={handleLogin} />;
   }
 
   const renderPage = () => {
@@ -100,7 +101,7 @@ function App() {
       case 'suppliers': return isAdmin ? <Suppliers db={erp.db} erp={erp} user={user} /> : <Dashboard db={erp.db} />;
       case 'expenses': return isAdmin ? <Expenses db={erp.db} erp={erp} user={user} /> : <Dashboard db={erp.db} />;
       case 'reports': return isAdmin ? <Reports db={erp.db} /> : <Dashboard db={erp.db} />;
-      case 'loginlog': return isAdmin ? <LoginActivity db={erp.db} /> : <Dashboard db={erp.db} />;
+      case 'loginlog': return isAdmin ? <LoginActivity db={erp.db} erp={erp} /> : <Dashboard db={erp.db} />;
       case 'settings': return isAdmin ? <Settings db={erp.db} erp={erp} user={user} /> : <Dashboard db={erp.db} />;
       default: return <Dashboard db={erp.db} />;
     }
@@ -121,7 +122,6 @@ function App() {
           db={erp.db}
         />
         <div className="content">
-          {erp.error ? <div className="card" style={{ marginBottom: 16, color: '#b91c1c' }}>{erp.error}</div> : null}
           {renderPage()}
         </div>
       </div>

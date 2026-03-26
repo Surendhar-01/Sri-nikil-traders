@@ -6,15 +6,19 @@ export default function Settings({ db, erp }) {
   const [shopSettings, setShopSettings] = useState(() => db.settings);
   const [gstValue, setGstValue] = useState(() => String(db.settings?.gst ?? 0));
 
-  const saveSettings = (nextSettings, successMessage) => {
-    erp.updateDb('settings', nextSettings);
-    setShopSettings(nextSettings);
-    setGstValue(String(nextSettings?.gst ?? 0));
-    alert(successMessage);
+  const saveSettings = async (nextSettings, successMessage) => {
+    try {
+      await erp.updateSettings(nextSettings);
+      setShopSettings(nextSettings);
+      setGstValue(String(nextSettings?.gst ?? 0));
+      alert(successMessage);
+    } catch (error) {
+      alert(error.message || 'Failed to update settings');
+    }
   };
 
-  const handleSaveSettings = () => {
-    saveSettings(
+  const handleSaveSettings = async () => {
+    await saveSettings(
       {
         ...db.settings,
         ...shopSettings,
@@ -24,7 +28,7 @@ export default function Settings({ db, erp }) {
     );
   };
 
-  const handleUpdateGst = () => {
+  const handleUpdateGst = async () => {
     const parsedGst = Number(gstValue);
 
     if (Number.isNaN(parsedGst) || parsedGst < 0) {
@@ -32,7 +36,7 @@ export default function Settings({ db, erp }) {
       return;
     }
 
-    saveSettings(
+    await saveSettings(
       {
         ...db.settings,
         ...shopSettings,
@@ -49,7 +53,7 @@ export default function Settings({ db, erp }) {
     }));
   };
 
-  const addStaff = () => {
+  const addStaff = async () => {
     const username = newStaff.user.trim();
 
     if (!username || !newStaff.pass.trim()) {
@@ -61,13 +65,16 @@ export default function Settings({ db, erp }) {
       return;
     }
 
-    const accounts = [...db.accounts, { ...newStaff, user: username }];
-    erp.updateDb('accounts', accounts);
-    setShowStaffModal(false);
-    setNewStaff({ user: '', pass: '', role: 'Staff' });
+    try {
+      await erp.addStaff({ ...newStaff, user: username });
+      setShowStaffModal(false);
+      setNewStaff({ user: '', pass: '', role: 'Staff' });
+    } catch (error) {
+      alert(error.message || 'Failed to add staff');
+    }
   };
 
-  const deleteStaff = (username) => {
+  const deleteStaff = async (username) => {
     if (username === 'admin') {
       return;
     }
@@ -77,8 +84,11 @@ export default function Settings({ db, erp }) {
       return;
     }
 
-    const accounts = db.accounts.filter(account => account.user !== username);
-    erp.updateDb('accounts', accounts);
+    try {
+      await erp.deleteStaff(username);
+    } catch (error) {
+      alert(error.message || 'Failed to delete staff');
+    }
   };
 
   const backupDB = () => {

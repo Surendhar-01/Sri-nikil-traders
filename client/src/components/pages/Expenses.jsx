@@ -4,6 +4,33 @@ import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
+const demoExpenses = [
+  {
+    id: 1,
+    date: '2026-03-10T09:15:00.000Z',
+    category: 'Transport',
+    desc: 'Delivery van diesel refill',
+    amount: 2450,
+    by: 'admin'
+  },
+  {
+    id: 2,
+    date: '2026-03-14T12:30:00.000Z',
+    category: 'Shop',
+    desc: 'Packing covers and carry bags',
+    amount: 1180,
+    by: 'staff'
+  },
+  {
+    id: 3,
+    date: '2026-03-21T16:45:00.000Z',
+    category: 'Maintenance',
+    desc: 'Billing printer service',
+    amount: 900,
+    by: 'admin'
+  }
+];
+
 function formatCurrency(amount) {
   return `\u20B9${Number(amount || 0).toFixed(2)}`;
 }
@@ -13,6 +40,7 @@ export default function Expenses({ db, erp, user }) {
   const [newExp, setNewExp] = useState({ category: 'Transport', desc: '', amount: '' });
 
   const revenueEntries = db.revenueEntries || [];
+  const expenses = db.expenses && db.expenses.length > 0 ? db.expenses : demoExpenses;
 
   useEffect(() => {
     if (!showExpModal) {
@@ -64,7 +92,7 @@ export default function Expenses({ db, erp, user }) {
       .filter(entry => entry.date.startsWith(monthKey))
       .reduce((sum, entry) => sum + entry.amount, 0);
 
-    const monthlyExpenses = db.expenses
+    const monthlyExpenses = expenses
       .filter(expense => expense.date.startsWith(monthKey))
       .reduce((sum, expense) => sum + expense.amount, 0);
 
@@ -107,7 +135,7 @@ export default function Expenses({ db, erp, user }) {
                 </tr>
               </thead>
               <tbody>
-                {db.expenses.map(expense => (
+                {expenses.map(expense => (
                   <tr key={expense.id}>
                     <td>{new Date(expense.date).toLocaleDateString()}</td>
                     <td><span className="badge badge-orange">{expense.category}</span></td>
@@ -115,7 +143,7 @@ export default function Expenses({ db, erp, user }) {
                     <td className="text-muted text-xs">{expense.by}</td>
                   </tr>
                 ))}
-                {db.expenses.length === 0 && (
+                {expenses.length === 0 && (
                   <tr>
                     <td colSpan="4" className="text-center text-muted">No expenses recorded yet</td>
                   </tr>

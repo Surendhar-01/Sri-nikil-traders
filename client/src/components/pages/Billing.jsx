@@ -22,7 +22,7 @@ export default function Billing({ erp, user }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const filteredProducts = db.products.filter(product =>
+  const filteredProducts = db.products.filter((product) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -52,7 +52,124 @@ export default function Billing({ erp, user }) {
   const gstAmt = subtotal - netSubtotal;
   const grandTotal = subtotal;
 
-  const handleSaveBill = () => {
+  const openBillPrintWindow = (billData) => {
+    const settings = db.settings;
+    const printedAt = billData.date
+      ? new Date(billData.date).toLocaleString()
+      : new Date().toLocaleString();
+    const billItems = Array.isArray(billData.items) ? billData.items : [];
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Times New Roman', serif; width: 760px; margin: 0 auto; padding: 18px; color: #1f2a44; font-size: 15px; line-height: 1.25; }
+    .invoice { border: 2px solid #324f86; padding: 14px 18px 20px; }
+    .invoice-title { text-align: center; font-size: 26px; font-weight: 700; text-decoration: underline; letter-spacing: 1px; margin-bottom: 10px; }
+    .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 10px; }
+    .license-block { font-size: 16px; line-height: 1.5; }
+    .date-block { min-width: 220px; font-size: 16px; text-align: right; }
+    .date-line { margin-bottom: 8px; }
+    .shop-name { text-align: center; font-size: 46px; font-style: italic; color: #324f86; margin: 8px 0 2px; line-height: 1; }
+    .shop-address { text-align: center; font-size: 17px; line-height: 1.35; margin-bottom: 10px; }
+    .to-line { display: flex; align-items: center; gap: 10px; font-size: 18px; margin: 10px 0 14px; }
+    .to-line-label { min-width: 32px; font-weight: 700; }
+    .to-line-value { flex: 1; border-bottom: 2px dotted #324f86; padding: 0 0 4px; min-height: 28px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 0; table-layout: fixed; }
+    th, td { border: 2px solid #324f86; padding: 8px 10px; vertical-align: top; }
+    th { text-align: center; font-size: 16px; font-weight: 700; }
+    .col-rate { width: 110px; text-align: right; }
+    .col-item { width: auto; }
+    .col-qty { width: 90px; text-align: center; }
+    .col-amount { width: 140px; text-align: right; }
+    .item-cell { min-height: 320px; }
+    .item-line { margin-bottom: 6px; }
+    .qty-cell { text-align: center; font-size: 20px; }
+    .money { text-align: right; white-space: nowrap; }
+    .summary-wrap { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; margin-top: 8px; }
+    .summary-left { font-size: 17px; min-width: 140px; }
+    .summary-right { margin-left: auto; min-width: 260px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #9aa8c7; }
+    .summary-row.total { font-size: 24px; font-weight: 700; border-bottom: 0; padding-top: 8px; }
+    .footer-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 28px; }
+    .footer-left { font-size: 18px; }
+    .footer-right { text-align: right; font-size: 18px; min-width: 240px; }
+    .signature-space { height: 34px; }
+    @media print {
+      body { width: 100%; padding: 0; }
+      .invoice { border-width: 1.5px; }
+      @page { margin: 0; size: auto; }
+    }
+  </style>
+</head>
+<body onload="setTimeout(() => { window.print(); window.close(); }, 300)">
+  <div class="invoice">
+    <div class="invoice-title">TAX INVOICE</div>
+    <div class="top-row">
+      <div class="license-block">
+        <div>GSTIN : ${settings.gstin || '-'}</div>
+        <div>FSSAI License No : ${settings.fssai || '-'}</div>
+      </div>
+      <div class="date-block">
+        <div class="date-line"><b>Date:</b> ${printedAt}</div>
+        <div><b>Phone:</b> ${settings.phone}</div>
+      </div>
+    </div>
+    <div class="shop-name">${settings.shop}</div>
+    <div class="shop-address">${settings.addr}</div>
+    <div class="to-line">
+      <div class="to-line-label">To</div>
+      <div class="to-line-value">${billData.customer || ''}</div>
+    </div>
+    <table>
+      <tr>
+        <th class="col-rate">Rate</th>
+        <th class="col-item">Description</th>
+        <th class="col-qty">Qty</th>
+        <th class="col-amount">Amount</th>
+      </tr>
+      <tr>
+        <td class="money">
+          ${billItems.map((item) => `<div class="item-line">${Number(item.price || 0).toFixed(2)}</div>`).join('')}
+        </td>
+        <td class="item-cell">
+          ${billItems.map((item) => `<div class="item-line">${item.name}</div>`).join('')}
+        </td>
+        <td class="qty-cell">
+          ${billItems.map((item) => `<div class="item-line">${item.qty}</div>`).join('')}
+        </td>
+        <td class="money">
+          ${billItems.map((item) => `<div class="item-line">${Number(item.total || 0).toFixed(2)}</div>`).join('')}
+        </td>
+      </tr>
+    </table>
+    <div class="summary-wrap">
+      <div class="summary-left">E & O.E.</div>
+      <div class="summary-right">
+        <div class="summary-row"><span>Bill No</span><span>${billData.billNo || ''}</span></div>
+        <div class="summary-row"><span>Subtotal</span><span>${Number(billData.subtotal || 0).toFixed(2)}</span></div>
+        <div class="summary-row"><span>CGST</span><span>${Number(billData.cgst || 0).toFixed(2)}</span></div>
+        <div class="summary-row"><span>SGST</span><span>${Number(billData.sgst || 0).toFixed(2)}</span></div>
+        <div class="summary-row total"><span>Total</span><span>${Number(billData.grand || 0).toFixed(2)}</span></div>
+      </div>
+    </div>
+    <div class="footer-row">
+      <div class="footer-left">${billData.payment || ''}</div>
+      <div class="footer-right">
+        <div class="signature-space"></div>
+        <div>For ${settings.shop}</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
+  const handleSaveBill = async () => {
     if (items.length === 0) return alert('Cart is empty!');
     if (!customer.trim()) return alert('Please enter Customer Name!');
     if (!phone.trim() || phone.length < 10) return alert('Valid 10-digit Mobile Number is required!');
@@ -72,71 +189,39 @@ export default function Billing({ erp, user }) {
       by: user.user
     };
 
-    addBill(bill);
-    alert('Bill Saved Successfully!');
-    setItems([]);
+    try {
+      await addBill(bill);
+      alert('Bill Saved Successfully!');
+      setItems([]);
+      setCustomer('');
+      setPhone('');
+      setPayment('Cash');
+    } catch (error) {
+      alert(error.message || 'Failed to save bill');
+    }
   };
 
   const printBill = () => {
     if (items.length === 0) return alert('No items to print!');
     if (!customer.trim()) return alert('Please enter Customer Name!');
     if (!phone.trim() || phone.length < 10) return alert('Valid 10-digit Mobile Number is required!');
-
-    const settings = db.settings;
-    const html = `<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { font-family: 'Ubuntu', sans-serif; width: 300px; margin: 0 auto; padding: 10px; color: #000; font-size: 13px; line-height: 1.4; }
-    .center { text-align: center; }
-    .bold { font-weight: bold; }
-    .title { font-size: 18px; margin-bottom: 4px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; }
-    th, td { padding: 4px 0; border-bottom: 1px dashed #ccc; font-size: 12px; }
-    th { text-align: left; }
-    .right { text-align: right; border-bottom: none; }
-    td.right, th.right { border-bottom: 1px dashed #ccc; }
-    .totals { border-top: 2px dashed #000; padding-top: 5px; margin-top: 10px; }
-    .grand { font-size: 15px; font-weight: bold; margin-top: 4px; }
-    .divider { border-bottom: 1px dashed #000; margin: 10px 0; }
-    @media print {
-      body { width: 100%; margin: 0; padding: 0; }
-      @page { margin: 0; }
-    }
-  </style>
-</head>
-<body onload="setTimeout(() => { window.print(); window.close(); }, 300)">
-  <div class="center bold title">${settings.shop}</div>
-  <div class="center">${settings.addr}</div>
-  <div class="center">Ph: ${settings.phone}</div>
-  <div class="divider"></div>
-  <div><b>Bill No:</b> SNT-${String(db.billSeq).padStart(4, '0')}</div>
-  <div><b>Date:</b> ${new Date().toLocaleString()}</div>
-  <div><b>Customer:</b> ${customer}</div>
-  <div class="divider"></div>
-  <table>
-    <tr><th>Item</th><th class="right">Qty</th><th class="right">Rate</th><th class="right">Amt</th></tr>
-    ${items.map(item => `<tr><td>${item.name.split(' ').slice(0, 3).join(' ')}</td><td class="right">${item.qty}</td><td class="right">${item.price}</td><td class="right">${item.total}</td></tr>`).join('')}
-  </table>
-  <div class="totals">
-    <div style="display:flex; justify-content:space-between"><span>Subtotal:</span><span>₹${netSubtotal.toFixed(2)}</span></div>
-    <div style="display:flex; justify-content:space-between"><span>CGST:</span><span>₹${(gstAmt / 2).toFixed(2)}</span></div>
-    <div style="display:flex; justify-content:space-between"><span>SGST:</span><span>₹${(gstAmt / 2).toFixed(2)}</span></div>
-    <div style="display:flex; justify-content:space-between" class="grand"><span>TOTAL:</span><span>₹${grandTotal.toFixed(2)}</span></div>
-  </div>
-  <div class="divider"></div>
-  <div class="center bold">Thank You! Visit Again</div>
-</body>
-</html>`;
-
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-    printWindow.document.write(html);
-    printWindow.document.close();
+    openBillPrintWindow({
+      billNo: `SNT-${String(db.billSeq).padStart(4, '0')}`,
+      date: new Date().toISOString(),
+      customer,
+      phone,
+      payment,
+      items,
+      subtotal: netSubtotal,
+      cgst: gstAmt / 2,
+      sgst: gstAmt / 2,
+      grand: grandTotal
+    });
   };
 
   return (
-    <div className="flex gap-4">
-      <div className="flex-1">
+    <div className="flex flex-column gap-4">
+      <div>
         <div className="card mb-4 no-print">
           <div className="bill-header">
             <div className="bill-shop-name gold-text" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
@@ -149,7 +234,7 @@ export default function Billing({ erp, user }) {
             <div className="form-group"><label>Bill No</label><input readOnly value={`SNT-${String(db.billSeq).padStart(4, '0')}`} style={{ color: 'var(--accent)', fontWeight: 700 }} /></div>
             <div className="form-group"><label>Date</label><input readOnly value={new Date().toLocaleString()} /></div>
             <div className="form-group"><label>Payment</label>
-              <select value={payment} onChange={event => setPayment(event.target.value)}>
+              <select value={payment} onChange={(event) => setPayment(event.target.value)}>
                 <option>Cash</option>
                 <option>UPI</option>
                 <option>Card</option>
@@ -157,8 +242,8 @@ export default function Billing({ erp, user }) {
             </div>
           </div>
           <div className="form-row">
-            <div className="form-group"><label>Customer Name <span className="text-red" title="Required">*</span></label><input value={customer} onChange={event => setCustomer(event.target.value)} placeholder="Required" /></div>
-            <div className="form-group"><label>Mobile No <span className="text-red" title="Required">*</span></label><input value={phone} onChange={event => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} maxLength="10" placeholder="10 Digits Required" /></div>
+            <div className="form-group"><label>Customer Name <span className="text-red" title="Required">*</span></label><input value={customer} onChange={(event) => setCustomer(event.target.value)} placeholder="Required" /></div>
+            <div className="form-group"><label>Mobile No <span className="text-red" title="Required">*</span></label><input value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} maxLength="10" placeholder="10 Digits Required" /></div>
           </div>
         </div>
 
@@ -169,16 +254,16 @@ export default function Billing({ erp, user }) {
               <input
                 placeholder="Search products..."
                 value={searchTerm}
-                onChange={event => setSearchTerm(event.target.value)}
+                onChange={(event) => setSearchTerm(event.target.value)}
                 style={{ flex: 1 }}
               />
-              <input type="number" value={qty} onChange={event => setQty(event.target.value)} min="1" style={{ width: '90px' }} />
+              <input type="number" value={qty} onChange={(event) => setQty(event.target.value)} min="1" style={{ width: '90px' }} />
             </div>
             {searchTerm && (
               <div className="card shadow" style={{ position: 'absolute', width: '100%', zIndex: 10, marginTop: '2px', padding: '0', maxHeight: '200px', overflowY: 'auto' }}>
-                {filteredProducts.map(product => (
+                {filteredProducts.map((product) => (
                   <div key={product.id} className="nav-item" onClick={() => addItem(product)} style={{ padding: '10px 15px', borderBottom: '1px solid var(--border)' }}>
-                    {product.name} <span style={{ marginLeft: 'auto' }}>₹{product.price}</span>
+                    {product.name} <span style={{ marginLeft: 'auto' }}>Rs {product.price}</span>
                   </div>
                 ))}
               </div>
@@ -188,7 +273,7 @@ export default function Billing({ erp, user }) {
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', marginBottom: '16px' }}>
             <div className="text-muted text-sm mb-2">Quick Add</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-              {db.products.slice(0, 8).map(product => (
+              {db.products.slice(0, 8).map((product) => (
                 <div key={product.id} className="chip" onClick={() => addItem(product)} style={{ fontSize: '.85rem' }}>
                   {product.name.split(' ')[0]} {product.name.split(' ').slice(-1)}
                 </div>
@@ -204,7 +289,7 @@ export default function Billing({ erp, user }) {
                   <tr key={index}>
                     <td style={{ fontSize: '.8rem' }}>{item.name}</td>
                     <td>{item.qty}</td>
-                    <td>₹{item.total}</td>
+                    <td>Rs {item.total}</td>
                     <td style={{ textAlign: 'right' }}>
                       <button className="del-btn" onClick={() => removeItem(index)} title="Remove Item">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -224,10 +309,10 @@ export default function Billing({ erp, user }) {
           </div>
 
           <div className="totals-box">
-            <div className="total-row"><span>Subtotal:</span><span>₹{netSubtotal.toFixed(2)}</span></div>
-            <div className="total-row"><span>CGST @{(db.settings.gst / 2).toFixed(1)}%:</span><span>₹{(gstAmt / 2).toFixed(2)}</span></div>
-            <div className="total-row"><span>SGST @{(db.settings.gst / 2).toFixed(1)}%:</span><span>₹{(gstAmt / 2).toFixed(2)}</span></div>
-            <div className="total-row grand"><span>Total:</span><span>₹{grandTotal.toFixed(2)}</span></div>
+            <div className="total-row"><span>Subtotal:</span><span>Rs {netSubtotal.toFixed(2)}</span></div>
+            <div className="total-row"><span>CGST @{(db.settings.gst / 2).toFixed(1)}%:</span><span>Rs {(gstAmt / 2).toFixed(2)}</span></div>
+            <div className="total-row"><span>SGST @{(db.settings.gst / 2).toFixed(1)}%:</span><span>Rs {(gstAmt / 2).toFixed(2)}</span></div>
+            <div className="total-row grand"><span>Total:</span><span>Rs {grandTotal.toFixed(2)}</span></div>
           </div>
 
           <div className="mt-4 flex gap-2">
@@ -238,10 +323,10 @@ export default function Billing({ erp, user }) {
         </div>
       </div>
 
-      <div className="card no-print" style={{ width: '380px', minWidth: '380px' }}>
+      <div className="card no-print" style={{ width: '100%', maxWidth: '420px' }}>
         <div className="section-title">Recent Bills</div>
-        <div className="flex flex-column gap-2" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
-          {db.bills.slice(0, 10).map(bill => (
+        <div className="recent-bills-list">
+          {db.bills.slice(0, 10).map((bill) => (
             <div key={bill.id} className="card bg3 border-radius mb-1" style={{ padding: '10px', cursor: 'pointer', transition: '0.2s', border: '1px solid var(--border)' }} onClick={() => setViewBill(bill)} title="Click to view details">
               <div className="flex justify-between items-center mb-1">
                 <b className="text-accent text-sm">{bill.billNo}</b>
@@ -255,7 +340,7 @@ export default function Billing({ erp, user }) {
               <div className="text-sm fw-600">{bill.customer}</div>
               <div className="flex justify-between mt-2">
                 <span className="badge badge-green text-xs" style={{ padding: '1px 6px' }}>{bill.payment}</span>
-                <b className="text-sm">₹{bill.grand.toFixed(2)}</b>
+                <b className="text-sm">Rs {bill.grand.toFixed(2)}</b>
               </div>
             </div>
           ))}
@@ -265,13 +350,13 @@ export default function Billing({ erp, user }) {
 
       {viewBill && (
         <div className="modal-overlay open" onClick={() => setViewBill(null)} style={{ padding: '20px' }}>
-          <div className="modal" onClick={event => event.stopPropagation()}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header" style={{ marginBottom: '15px' }}>
               <div style={{ flex: 1 }}>
                 <h3 style={{ margin: 0, color: 'var(--text)' }}>Bill Details</h3>
                 <div style={{ fontSize: '0.9rem', color: 'var(--accent)', fontWeight: 600 }}>{viewBill.billNo}</div>
               </div>
-              <button className="modal-close" onClick={() => setViewBill(null)}>×</button>
+              <button className="modal-close" onClick={() => setViewBill(null)}>x</button>
             </div>
 
             <div style={{ paddingBottom: '15px', borderBottom: '1px solid var(--border)', marginBottom: '15px' }}>
@@ -299,8 +384,8 @@ export default function Billing({ erp, user }) {
                     <tr key={index}>
                       <td>{item.name}</td>
                       <td style={{ textAlign: 'right' }}>{item.qty}</td>
-                      <td style={{ textAlign: 'right' }}>₹{item.price.toFixed(2)}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{item.total.toFixed(2)}</td>
+                      <td style={{ textAlign: 'right' }}>Rs {item.price.toFixed(2)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>Rs {item.total.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -308,14 +393,15 @@ export default function Billing({ erp, user }) {
             </div>
 
             <div className="totals-box mb-4">
-              <div className="total-row"><span>Subtotal:</span><span>₹{viewBill.subtotal.toFixed(2)}</span></div>
-              <div className="total-row"><span>CGST:</span><span>₹{viewBill.cgst.toFixed(2)}</span></div>
-              <div className="total-row"><span>SGST:</span><span>₹{viewBill.sgst.toFixed(2)}</span></div>
-              <div className="total-row grand"><span>Total:</span><span>₹{viewBill.grand.toFixed(2)}</span></div>
+              <div className="total-row"><span>Subtotal:</span><span>Rs {viewBill.subtotal.toFixed(2)}</span></div>
+              <div className="total-row"><span>CGST:</span><span>Rs {viewBill.cgst.toFixed(2)}</span></div>
+              <div className="total-row"><span>SGST:</span><span>Rs {viewBill.sgst.toFixed(2)}</span></div>
+              <div className="total-row grand"><span>Total:</span><span>Rs {viewBill.grand.toFixed(2)}</span></div>
             </div>
 
             <div className="flex justify-end items-center mt-2">
-              <button className="btn btn-secondary" onClick={() => setViewBill(null)} style={{ padding: '8px 24px' }}>Close</button>
+              <button className="btn btn-secondary" onClick={() => openBillPrintWindow(viewBill)} style={{ padding: '8px 24px', marginRight: '8px' }}>Print</button>
+              <button className="btn btn-blue" onClick={() => setViewBill(null)} style={{ padding: '8px 24px' }}>Close</button>
             </div>
           </div>
         </div>

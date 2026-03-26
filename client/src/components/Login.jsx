@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
 
-export default function Login({ onLogin, accounts }) {
+export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
 
-  const doLogin = () => {
-    const found = accounts.find(account => account.user === username && account.pass === password);
-
-    if (found) {
+  const doLogin = async () => {
+    try {
+      await onLogin(username, password);
       setError(false);
-      onLogin(found);
-      return;
+    } catch {
+      setError(true);
     }
-
-    setError(true);
   };
 
   const fillDemo = (user, pass) => {

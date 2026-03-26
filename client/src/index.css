@@ -140,6 +140,62 @@ tr:hover td { background: #fff7ed; }
 .total-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: .88rem; color: var(--text); }
 .total-row.grand { font-family: 'Ubuntu', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--accent); border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; }
 
+.recent-bills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+.recent-bills-list > .card {
+  padding: 12px 14px !important;
+  margin-bottom: 0 !important;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.recent-bills-list > .card > .flex:first-child {
+  align-items: center;
+  margin-bottom: 6px !important;
+}
+
+.recent-bills-list > .card > .flex:first-child b {
+  color: var(--accent);
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.recent-bills-list > .card > .flex:first-child .text-xs {
+  font-size: 0.88rem;
+  color: var(--text2);
+}
+
+.recent-bills-list > .card > .text-sm.fw-600 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.recent-bills-list > .card > .flex:last-child {
+  align-items: center;
+  margin-top: 0 !important;
+}
+
+.recent-bills-list .badge {
+  padding: 2px 8px !important;
+  font-size: 0.82rem !important;
+}
+
+.recent-bills-list > .card > .flex:last-child b {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
 /* ───── INVOICE PRINT ───── */
 @media print {
   body * { visibility: hidden; }

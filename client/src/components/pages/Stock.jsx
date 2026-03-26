@@ -20,31 +20,37 @@ export default function Stock({ db, erp, user }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [refillProduct]);
 
-  const submitRefill = () => {
+  const submitRefill = async () => {
     if (!refillQty || Number.isNaN(Number(refillQty)) || parseInt(refillQty, 10) <= 0) {
       alert('Enter a valid positive quantity');
       return;
     }
 
-    erp.addRefill({
-      id: Date.now(),
-      date: new Date().toISOString(),
-      product: refillProduct,
-      qty: parseInt(refillQty, 10),
-      by: user ? user.user : 'Admin'
-    });
+    try {
+      await erp.addRefill({
+        product: refillProduct,
+        qty: parseInt(refillQty, 10),
+        by: user ? user.user : 'Admin'
+      });
 
-    setRefillProduct(null);
-    setRefillQty('');
+      setRefillProduct(null);
+      setRefillQty('');
+    } catch (error) {
+      alert(error.message || 'Failed to save refill');
+    }
   };
 
-  const handleClearRefills = () => {
+  const handleClearRefills = async () => {
     if (!db.refills.length) {
       return;
     }
 
     if (confirm('Clear all refill history entries?')) {
-      erp.clearRefills();
+      try {
+        await erp.clearRefills();
+      } catch (error) {
+        alert(error.message || 'Failed to clear refills');
+      }
     }
   };
 

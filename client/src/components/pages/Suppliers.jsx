@@ -26,51 +26,44 @@ export default function Suppliers({ db, erp, user }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showSupplierModal, showPurchaseModal, showEditModal]);
 
-  const handleAddSupplier = () => {
+  const handleAddSupplier = async () => {
     if (!newSupplier.name.trim()) {
       return;
     }
 
-    const createdSupplier = {
-      id: Date.now(),
-      name: newSupplier.name.trim(),
-      contact: newSupplier.contact.trim(),
-      products: newSupplier.products.trim(),
-      addr: newSupplier.addr.trim(),
-      total: 0
-    };
-
-    erp.updateDb('suppliers', [...db.suppliers, createdSupplier]);
-    setShowSupplierModal(false);
-    setNewSupplier({ name: '', contact: '', products: '', addr: '' });
+    try {
+      await erp.addSupplier({
+        name: newSupplier.name.trim(),
+        contact: newSupplier.contact.trim(),
+        products: newSupplier.products.trim(),
+        addr: newSupplier.addr.trim()
+      });
+      setShowSupplierModal(false);
+      setNewSupplier({ name: '', contact: '', products: '', addr: '' });
+    } catch (error) {
+      alert(error.message || 'Failed to add supplier');
+    }
   };
 
-  const handleRecordPurchase = () => {
+  const handleRecordPurchase = async () => {
     if (!newPurchase.supplier || !newPurchase.product || !newPurchase.qty || !newPurchase.amount) {
       return;
     }
 
-    erp.addPurchase({
-      id: Date.now(),
-      date: new Date().toISOString(),
-      ...newPurchase,
-      qty: parseInt(newPurchase.qty, 10),
-      amount: parseFloat(newPurchase.amount),
-      by: user.user
-    });
+    try {
+      await erp.addPurchase({
+        ...newPurchase,
+        qty: parseInt(newPurchase.qty, 10),
+        amount: parseFloat(newPurchase.amount),
+        by: user.user
+      });
 
-    erp.addExpense({
-      id: Date.now() + 1,
-      date: new Date().toISOString(),
-      category: 'Purchase',
-      desc: `Paid to ${newPurchase.supplier} for ${newPurchase.product}`,
-      amount: parseFloat(newPurchase.amount),
-      by: user.user
-    });
-
-    alert('Purchase recorded and stock updated!');
-    setShowPurchaseModal(false);
-    setNewPurchase({ supplier: '', product: '', qty: 0, amount: 0 });
+      alert('Purchase recorded and stock updated!');
+      setShowPurchaseModal(false);
+      setNewPurchase({ supplier: '', product: '', qty: 0, amount: 0 });
+    } catch (error) {
+      alert(error.message || 'Failed to record purchase');
+    }
   };
 
   const openEditModal = (supplier) => {
@@ -78,31 +71,28 @@ export default function Suppliers({ db, erp, user }) {
     setShowEditModal(true);
   };
 
-  const handleUpdateSupplier = () => {
+  const handleUpdateSupplier = async () => {
     if (!editingSupplier?.name?.trim()) {
       return;
     }
 
-    const updatedSuppliers = db.suppliers.map((supplier) => (
-      supplier.id === editingSupplier.id
-        ? {
-            ...supplier,
-            name: editingSupplier.name.trim(),
-            contact: editingSupplier.contact.trim(),
-            products: editingSupplier.products.trim(),
-            addr: editingSupplier.addr.trim()
-          }
-        : supplier
-    ));
-
-    erp.updateDb('suppliers', updatedSuppliers);
-    setShowEditModal(false);
-    setEditingSupplier(null);
+    try {
+      await erp.updateSupplier(editingSupplier.id, {
+        name: editingSupplier.name.trim(),
+        contact: editingSupplier.contact.trim(),
+        products: editingSupplier.products.trim(),
+        addr: editingSupplier.addr.trim()
+      });
+      setShowEditModal(false);
+      setEditingSupplier(null);
+    } catch (error) {
+      alert(error.message || 'Failed to update supplier');
+    }
   };
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center" style={{ marginBottom: '20px' }}>
         <h2 className="section-title" style={{ margin: 0 }}>Supplier Management</h2>
         <div className="flex gap-2">
           <button className="btn btn-blue" onClick={() => setShowPurchaseModal(true)}>Record Purchase</button>
@@ -136,7 +126,19 @@ export default function Suppliers({ db, erp, user }) {
                     <td>{supplier.products}</td>
                     <td className="fw-bold">₹{supplier.total.toFixed(2)}</td>
                     <td>
-                      <button className="btn btn-sm btn-secondary" onClick={() => openEditModal(supplier)}>Edit</button>
+                      <div className="flex gap-2">
+                        <button className="btn btn-sm btn-secondary" onClick={() => openEditModal(supplier)}>Edit</button>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={() => {
+                            if (confirm(`Delete supplier "${supplier.name}"?`)) {
+                              erp.deleteSupplier(supplier.id);
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
