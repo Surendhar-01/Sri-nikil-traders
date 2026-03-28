@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import './Stock.css';
 
 export default function Stock({ db, erp, user }) {
   const [refillProduct, setRefillProduct] = useState(null);
@@ -55,8 +56,8 @@ export default function Stock({ db, erp, user }) {
   };
 
   return (
-    <div>
-      <div className="card mb-4">
+    <div className="stock-page">
+      <div className="card mb-4 stock-card">
         <div className="section-title">Stock Management</div>
         <div className="table-wrap">
           <table>
@@ -71,7 +72,7 @@ export default function Stock({ db, erp, user }) {
               </tr>
             </thead>
             <tbody>
-              {db.products.map(product => (
+              {db.products.map((product) => (
                 <tr key={product.id}>
                   <td><b>{product.name}</b></td>
                   <td>{product.stock + (product.sold || 0)}</td>
@@ -92,9 +93,9 @@ export default function Stock({ db, erp, user }) {
         </div>
       </div>
 
-      <div className="card">
-        <div className="flex justify-between items-center mb-3">
-          <div className="section-title" style={{ margin: 0 }}>Refill History</div>
+      <div className="card stock-card">
+        <div className="flex justify-between items-center mb-3 stock-history-header">
+          <div className="section-title stock-inline-title">Refill History</div>
           <button className="btn btn-danger btn-sm" type="button" onClick={handleClearRefills}>Clear All</button>
         </div>
         <div className="table-wrap">
@@ -108,7 +109,7 @@ export default function Stock({ db, erp, user }) {
               </tr>
             </thead>
             <tbody>
-              {db.refills.map(refill => (
+              {db.refills.map((refill) => (
                 <tr key={refill.id}>
                   <td>{new Date(refill.date).toLocaleDateString('en-GB')}</td>
                   <td>{refill.product}</td>
@@ -128,10 +129,10 @@ export default function Stock({ db, erp, user }) {
 
       {refillProduct && (
         <div className="modal-overlay open" onClick={() => { setRefillProduct(null); setRefillQty(''); }}>
-          <div className="modal" onClick={event => event.stopPropagation()}>
+          <div className="modal stock-modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Refill Stock</h3>
-              <button className="modal-close" type="button" onClick={() => { setRefillProduct(null); setRefillQty(''); }}>×</button>
+              <button className="modal-close" type="button" onClick={() => { setRefillProduct(null); setRefillQty(''); }}>x</button>
             </div>
             <p className="text-sm mb-3">Add new stock inventory for <b>{refillProduct}</b></p>
             <div className="form-group mb-4">
@@ -139,11 +140,11 @@ export default function Stock({ db, erp, user }) {
               <input
                 type="number"
                 value={refillQty}
-                onChange={event => setRefillQty(event.target.value)}
+                onChange={(event) => setRefillQty(event.target.value)}
                 min="1"
                 placeholder="Enter quantity"
                 autoFocus
-                onKeyDown={event => {
+                onKeyDown={(event) => {
                   if (event.key === 'Enter') submitRefill();
                 }}
               />

@@ -1,14 +1,5 @@
 import React from 'react';
-
-function getTrendLabel(currentPrice, previousPrice) {
-  if (currentPrice > previousPrice) {
-    return 'UP';
-  }
-  if (currentPrice < previousPrice) {
-    return 'DOWN';
-  }
-  return 'STEADY';
-}
+import './PriceBoard.css';
 
 function formatDate(date) {
   return new Intl.DateTimeFormat('en-GB').format(date);
@@ -54,13 +45,11 @@ export default function PriceBoard({ db }) {
           {db.products.map((product, index) => {
             const history = db.priceHistory.find(entry => entry.product === product.name);
             const previousPrice = history ? history.old : product.price;
-            const trendLabel = getTrendLabel(product.price, previousPrice);
 
             return (
               <div key={product.id} className="price-card">
                 <div className="price-card-top">
                   <div className="price-card-index">{String(index + 1).padStart(2, '0')}</div>
-                  <div className={`price-card-status ${trendLabel.toLowerCase()}`}>{trendLabel}</div>
                 </div>
 
                 <div className="price-card-name">{product.name}</div>

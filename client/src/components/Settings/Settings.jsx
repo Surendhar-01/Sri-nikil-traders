@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './Settings.css';
 
 export default function Settings({ db, erp }) {
   const [showStaffModal, setShowStaffModal] = useState(false);
@@ -174,7 +175,14 @@ export default function Settings({ db, erp }) {
 
       <div>
         <div className="card mb-4">
-          <div className="section-title">Staff Accounts</div>
+          <div className="settings-staff-header">
+            <div>
+              <div className="section-title" style={{ marginBottom: 6 }}>Staff Accounts</div>
+              <div className="text-muted text-sm">{db.accounts.length} account{db.accounts.length === 1 ? '' : 's'} configured</div>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowStaffModal(true)}>Add Staff</button>
+          </div>
+
           <div className="table-wrap mb-3">
             <table>
               <thead>
@@ -187,7 +195,9 @@ export default function Settings({ db, erp }) {
               <tbody>
                 {db.accounts.map(account => (
                   <tr key={account.user}>
-                    <td>{account.user}</td>
+                    <td>
+                      <div className="settings-staff-user">{account.user}</div>
+                    </td>
                     <td>
                       <span className={`badge ${account.role === 'Admin' ? 'badge-purple' : 'badge-blue'}`}>
                         {account.role}
@@ -195,7 +205,7 @@ export default function Settings({ db, erp }) {
                     </td>
                     <td>
                       {account.user !== 'admin' && (
-                        <button className="text-red" onClick={() => deleteStaff(account.user)}>Delete</button>
+                        <button className="settings-staff-delete" onClick={() => deleteStaff(account.user)}>Delete</button>
                       )}
                     </td>
                   </tr>
@@ -203,7 +213,6 @@ export default function Settings({ db, erp }) {
               </tbody>
             </table>
           </div>
-          <button className="btn btn-primary btn-sm" onClick={() => setShowStaffModal(true)}>Add Staff</button>
         </div>
 
         <div className="card">
@@ -223,15 +232,19 @@ export default function Settings({ db, erp }) {
       </div>
 
       {showStaffModal && (
-        <div className="modal-overlay open">
-          <div className="modal">
+        <div className="modal-overlay open" onClick={() => setShowStaffModal(false)}>
+          <div className="modal settings-staff-modal" onClick={event => event.stopPropagation()}>
             <div className="modal-header">
-              <h3>Add Staff</h3>
-              <button type="button" onClick={() => setShowStaffModal(false)}>X</button>
+              <div>
+                <div className="modal-title">Add Staff Account</div>
+                <div className="text-muted text-sm">Create a new login for your team.</div>
+              </div>
+              <button className="modal-close" type="button" onClick={() => setShowStaffModal(false)}>x</button>
             </div>
             <div className="form-group mb-3">
               <label>Username</label>
               <input
+                placeholder="Enter username"
                 value={newStaff.user}
                 onChange={event => setNewStaff(prev => ({ ...prev, user: event.target.value }))}
               />
@@ -240,6 +253,7 @@ export default function Settings({ db, erp }) {
               <label>Password</label>
               <input
                 type="password"
+                placeholder="Enter password"
                 value={newStaff.pass}
                 onChange={event => setNewStaff(prev => ({ ...prev, pass: event.target.value }))}
               />
@@ -254,7 +268,10 @@ export default function Settings({ db, erp }) {
                 <option>Admin</option>
               </select>
             </div>
-            <button className="btn btn-primary btn-full" onClick={addStaff}>Save Account</button>
+            <div className="flex gap-2">
+              <button className="btn btn-primary flex-1" onClick={addStaff}>Save Account</button>
+              <button className="btn btn-secondary" type="button" onClick={() => setShowStaffModal(false)}>Cancel</button>
+            </div>
           </div>
         </div>
       )}

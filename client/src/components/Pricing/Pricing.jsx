@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import './Pricing.css';
 
 export default function Pricing({ db, erp, user }) {
   const [priceModal, setPriceModal] = useState(null);
@@ -55,8 +56,8 @@ export default function Pricing({ db, erp, user }) {
   };
 
   return (
-    <div>
-      <div className="card mb-4">
+    <div className="pricing-page">
+      <div className="card mb-4 pricing-card">
         <div className="section-title">Price Control</div>
         <div className="table-wrap">
           <table>
@@ -65,22 +66,19 @@ export default function Pricing({ db, erp, user }) {
                 <th>Product</th>
                 <th>Previous</th>
                 <th>Current</th>
-                <th>Trend</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {db.products.map(product => {
-                const history = db.priceHistory.find(entry => entry.product === product.name);
+              {db.products.map((product) => {
+                const history = db.priceHistory.find((entry) => entry.product === product.name);
                 const previous = history ? history.old : product.price;
-                const trend = product.price > previous ? '↑' : product.price < previous ? '↓' : '-';
 
                 return (
                   <tr key={product.id}>
                     <td><b>{product.name}</b></td>
-                    <td className="text-muted">₹{previous.toFixed(2)}</td>
-                    <td className="fw-bold text-accent">₹{product.price.toFixed(2)}</td>
-                    <td className={product.price > previous ? 'text-red' : 'text-green'}>{trend}</td>
+                    <td className="text-muted">Rs {previous.toFixed(2)}</td>
+                    <td className="fw-bold text-accent">Rs {product.price.toFixed(2)}</td>
                     <td>
                       <button className="btn btn-sm btn-primary" onClick={() => openPriceModal(product)}>Update</button>
                     </td>
@@ -92,9 +90,9 @@ export default function Pricing({ db, erp, user }) {
         </div>
       </div>
 
-      <div className="card">
-        <div className="flex justify-between items-center mb-3">
-          <div className="section-title" style={{ margin: 0 }}>Price Change Log</div>
+      <div className="card pricing-card">
+        <div className="flex justify-between items-center mb-3 pricing-log-header">
+          <div className="section-title pricing-inline-title">Price Change Log</div>
           <button className="btn btn-danger btn-sm" type="button" onClick={handleClearLog}>Clear All</button>
         </div>
 
@@ -111,12 +109,12 @@ export default function Pricing({ db, erp, user }) {
               </tr>
             </thead>
             <tbody>
-              {db.priceHistory.map(history => (
+              {db.priceHistory.map((history) => (
                 <tr key={history.id}>
                   <td className="text-xs">{new Date(history.date).toLocaleDateString('en-GB')}</td>
                   <td>{history.product}</td>
-                  <td className="text-muted">₹{history.old.toFixed(2)}</td>
-                  <td className="text-accent fw-bold">₹{history.new.toFixed(2)}</td>
+                  <td className="text-muted">Rs {history.old.toFixed(2)}</td>
+                  <td className="text-accent fw-bold">Rs {history.new.toFixed(2)}</td>
                   <td className="text-xs">{history.by}</td>
                   <td>
                     <button
@@ -131,7 +129,7 @@ export default function Pricing({ db, erp, user }) {
                         }
                       }}
                     >
-                      🗑
+                      Delete
                     </button>
                   </td>
                 </tr>
@@ -148,10 +146,10 @@ export default function Pricing({ db, erp, user }) {
 
       {priceModal && (
         <div className="modal-overlay open" onClick={() => setPriceModal(null)}>
-          <div className="modal" onClick={event => event.stopPropagation()}>
+          <div className="modal pricing-modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Update Price</h3>
-              <button className="modal-close" type="button" onClick={() => setPriceModal(null)}>×</button>
+              <button className="modal-close" type="button" onClick={() => setPriceModal(null)}>x</button>
             </div>
 
             <div className="form-group mb-3">
@@ -169,7 +167,7 @@ export default function Pricing({ db, erp, user }) {
                 <input
                   type="number"
                   value={priceModal.newPrice}
-                  onChange={event => setPriceModal({ ...priceModal, newPrice: event.target.value })}
+                  onChange={(event) => setPriceModal({ ...priceModal, newPrice: event.target.value })}
                 />
               </div>
             </div>

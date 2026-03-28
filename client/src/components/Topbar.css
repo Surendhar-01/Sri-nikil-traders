@@ -1,0 +1,5 @@
+.topbar { background: #fff; border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+.topbar-title { font-size: 1.4rem; font-weight: 700; letter-spacing: 1px; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.user-pill { display: flex; align-items: center; gap: 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: .82rem; color: var(--text); }
+.user-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }

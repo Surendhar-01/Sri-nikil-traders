@@ -1,0 +1,28 @@
+.suppliers-page {
+  display: grid;
+  gap: 20px;
+}
+
+.suppliers-header {
+  margin-bottom: 20px;
+}
+
+.suppliers-title {
+  margin: 0;
+}
+
+.suppliers-grid {
+  gap: 16px;
+}
+
+.suppliers-card {
+  min-height: 100%;
+}
+
+.suppliers-history-table {
+  max-height: 380px;
+}
+
+.suppliers-modal {
+  width: min(560px, 95vw);
+}

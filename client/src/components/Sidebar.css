@@ -1,0 +1,11 @@
+.sidebar { position: fixed; top: 0; left: 0; width: var(--sidebar); height: 100vh; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; overflow-y: auto; box-shadow: 2px 0 8px rgba(0,0,0,.04); }
+.sidebar-brand { padding: 18px 16px; border-bottom: 1px solid var(--border); background: linear-gradient(135deg, #fff7ed, #fff); }
+.sidebar-brand .shop-name { font-size: 1.1rem; font-weight: 700; line-height: 1.2; letter-spacing: 1px; }
+.sidebar-brand .user-role { font-size: .72rem; color: var(--text2); margin-top: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+.sidebar-nav { flex: 1; padding: 10px 0; }
+.nav-group-label { font-size: .68rem; color: var(--text3); padding: 10px 16px 4px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; cursor: pointer; font-size: .88rem; color: var(--text2); transition: .15s; border-left: 3px solid transparent; }
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: #fff7ed; color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+.nav-item .icon { font-size: 1.1rem; width: 20px; text-align: center; }
+.sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); }

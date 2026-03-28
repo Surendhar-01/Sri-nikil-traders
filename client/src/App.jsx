@@ -1,19 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
-import Dashboard from './components/pages/Dashboard';
-import Billing from './components/pages/Billing';
-import Products from './components/pages/Products';
-import Stock from './components/pages/Stock';
-import Pricing from './components/pages/Pricing';
-import PriceBoard from './components/pages/PriceBoard';
-import Sales from './components/pages/Sales';
-import Customers from './components/pages/Customers';
-import Suppliers from './components/pages/Suppliers';
-import Expenses from './components/pages/Expenses';
-import Reports from './components/pages/Reports';
-import LoginActivity from './components/pages/LoginActivity';
-import Settings from './components/pages/Settings';
+import Dashboard from './components/Dashboard/Dashboard';
+import Billing from './components/Billing/Billing';
+import Products from './components/Products/Products';
+import Stock from './components/Stock/Stock';
+import Pricing from './components/Pricing/Pricing';
+import PriceBoard from './components/PriceBoard/PriceBoard';
+import Sales from './components/Sales/Sales';
+import Customers from './components/Customers/Customers';
+import Reports from './components/Reports/Reports';
+import LoginActivity from './components/LoginActivity/LoginActivity';
+import Settings from './components/Settings/Settings';
 import Login from './components/Login';
 import { useERPData } from './hooks/useERPData';
 
@@ -90,20 +88,18 @@ function App() {
   const renderPage = () => {
     const isAdmin = user?.role === 'Admin';
     switch (currentPage) {
-      case 'dashboard': return <Dashboard db={erp.db} />;
+      case 'dashboard': return <Dashboard db={erp.db} user={user} />;
       case 'billing': return <Billing erp={erp} user={user} />;
       case 'products': return <Products db={erp.db} erp={erp} />;
       case 'stock': return <Stock db={erp.db} erp={erp} user={user} />;
-      case 'pricing': return isAdmin ? <Pricing db={erp.db} erp={erp} user={user} /> : <Dashboard db={erp.db} />;
+      case 'pricing': return isAdmin ? <Pricing db={erp.db} erp={erp} user={user} /> : <Dashboard db={erp.db} user={user} />;
       case 'priceboard': return <PriceBoard db={erp.db} />;
-      case 'sales': return isAdmin ? <Sales db={erp.db} /> : <Dashboard db={erp.db} />;
+      case 'sales': return isAdmin ? <Sales db={erp.db} /> : <Dashboard db={erp.db} user={user} />;
       case 'customers': return <Customers db={erp.db} />;
-      case 'suppliers': return isAdmin ? <Suppliers db={erp.db} erp={erp} user={user} /> : <Dashboard db={erp.db} />;
-      case 'expenses': return isAdmin ? <Expenses db={erp.db} erp={erp} user={user} /> : <Dashboard db={erp.db} />;
-      case 'reports': return isAdmin ? <Reports db={erp.db} /> : <Dashboard db={erp.db} />;
-      case 'loginlog': return isAdmin ? <LoginActivity db={erp.db} erp={erp} /> : <Dashboard db={erp.db} />;
-      case 'settings': return isAdmin ? <Settings db={erp.db} erp={erp} user={user} /> : <Dashboard db={erp.db} />;
-      default: return <Dashboard db={erp.db} />;
+      case 'reports': return isAdmin ? <Reports db={erp.db} /> : <Dashboard db={erp.db} user={user} />;
+      case 'loginlog': return isAdmin ? <LoginActivity db={erp.db} erp={erp} /> : <Dashboard db={erp.db} user={user} />;
+      case 'settings': return isAdmin ? <Settings db={erp.db} erp={erp} user={user} /> : <Dashboard db={erp.db} user={user} />;
+      default: return <Dashboard db={erp.db} user={user} />;
     }
   };
 

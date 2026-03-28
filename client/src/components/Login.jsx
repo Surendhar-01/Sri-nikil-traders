@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './Login.css';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -37,7 +38,7 @@ export default function Login({ onLogin }) {
         94875 81302 / 0424 2901803
       </div>
       <div className="login-box">
-        <h2>Staff Login</h2>
+        <h2>Login</h2>
         <div className="field">
           <label>Username</label>
           <input
@@ -80,7 +81,6 @@ export default function Login({ onLogin }) {
         </div>
         <div className="demo-chips">
           <div className="chip" onClick={() => fillDemo('admin', 'admin123')}>Admin</div>
-          <div className="chip" onClick={() => fillDemo('staff', 'staff123')}>Staff</div>
         </div>
       </div>
     </div>

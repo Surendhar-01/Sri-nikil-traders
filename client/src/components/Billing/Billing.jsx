@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import './Billing.css';
 
 export default function Billing({ erp, user }) {
   const [items, setItems] = useState([]);
@@ -220,8 +221,14 @@ export default function Billing({ erp, user }) {
   };
 
   return (
-    <div className="flex flex-column gap-4">
-      <div>
+    <div
+      className="grid gap-4"
+      style={{
+        gridTemplateColumns: 'minmax(0, 1.7fr) minmax(360px, 1fr)',
+        alignItems: 'start'
+      }}
+    >
+      <div style={{ minWidth: 0 }}>
         <div className="card mb-4 no-print">
           <div className="bill-header">
             <div className="bill-shop-name gold-text" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
@@ -270,17 +277,6 @@ export default function Billing({ erp, user }) {
             )}
           </div>
 
-          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', marginBottom: '16px' }}>
-            <div className="text-muted text-sm mb-2">Quick Add</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-              {db.products.slice(0, 8).map((product) => (
-                <div key={product.id} className="chip" onClick={() => addItem(product)} style={{ fontSize: '.85rem' }}>
-                  {product.name.split(' ')[0]} {product.name.split(' ').slice(-1)}
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="table-wrap mb-3">
             <table>
               <thead><tr><th>Item</th><th>Qty</th><th>Total</th><th></th></tr></thead>
@@ -323,7 +319,7 @@ export default function Billing({ erp, user }) {
         </div>
       </div>
 
-      <div className="card no-print" style={{ width: '100%', maxWidth: '420px' }}>
+      <div className="card no-print" style={{ width: '100%', minWidth: 0 }}>
         <div className="section-title">Recent Bills</div>
         <div className="recent-bills-list">
           {db.bills.slice(0, 10).map((bill) => (

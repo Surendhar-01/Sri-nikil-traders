@@ -1,10 +1,13 @@
 import React from 'react';
+import './Topbar.css';
 
 export default function Topbar({ title, user }) {
+  const normalizedTitle = title.replace('-', ' ');
+
   return (
     <div className="topbar">
       <div className="topbar-title gold-text">
-        {title.replace('-', ' ')}
+        {normalizedTitle}
       </div>
 
       <div className="topbar-right">

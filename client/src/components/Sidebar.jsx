@@ -1,4 +1,5 @@
 import React from 'react';
+import './Sidebar.css';
 
 function NavItem({ id, icon, label, currentPage, setCurrentPage }) {
   return (
@@ -6,7 +7,7 @@ function NavItem({ id, icon, label, currentPage, setCurrentPage }) {
       className={`nav-item ${currentPage === id ? 'active' : ''}`}
       onClick={() => setCurrentPage(id)}
     >
-      <span className="icon">{icon}</span>
+      {icon ? <span className="icon">{icon}</span> : null}
       <span>{label}</span>
     </div>
   );
@@ -40,19 +41,13 @@ export default function Sidebar({ currentPage, setCurrentPage, user, onLogout })
         {isAdmin ? (
           <NavItem id="pricing" icon="💰" label="Pricing" currentPage={currentPage} setCurrentPage={setCurrentPage} />
         ) : null}
-        <NavItem id="priceboard" icon="🖼️" label="Price Board" currentPage={currentPage} setCurrentPage={setCurrentPage} />
+        <NavItem id="priceboard" icon="🪧" label="Price Board" currentPage={currentPage} setCurrentPage={setCurrentPage} />
 
         <div className="nav-group-label">Business</div>
         {isAdmin ? (
           <NavItem id="sales" icon="📉" label="Sales" currentPage={currentPage} setCurrentPage={setCurrentPage} />
         ) : null}
         <NavItem id="customers" icon="👥" label="Customers" currentPage={currentPage} setCurrentPage={setCurrentPage} />
-        {isAdmin ? (
-          <NavItem id="suppliers" icon="🚚" label="Suppliers" currentPage={currentPage} setCurrentPage={setCurrentPage} />
-        ) : null}
-        {isAdmin ? (
-          <NavItem id="expenses" icon="💸" label="Expenses" currentPage={currentPage} setCurrentPage={setCurrentPage} />
-        ) : null}
 
         {isAdmin ? (
           <>

@@ -110,7 +110,12 @@ const defaultDb = {
   loginLogs: [],
   accounts: [
     { user: 'admin', pass: 'admin123', role: 'Admin' },
-    { user: 'staff', pass: 'staff123', role: 'Staff' }
+    { user: 'staff', pass: 'staff123', role: 'Staff' },
+    { user: 'staff1', pass: 'staff123', role: 'Staff' },
+    { user: 'staff2', pass: 'staff123', role: 'Staff' },
+    { user: 'staff3', pass: 'staff123', role: 'Staff' },
+    { user: 'staff4', pass: 'staff123', role: 'Staff' },
+    { user: 'staff5', pass: 'staff123', role: 'Staff' }
   ],
   settings: {
     gst: 5,
@@ -483,6 +488,39 @@ export function useERPData() {
     return { id: Number(id), ...supplier };
   };
 
+  const appendStaffLocally = (account) => {
+    const normalizedAccount = {
+      user: String(account.user || '').trim(),
+      pass: account.pass || account.password || '',
+      role: account.role || 'Staff'
+    };
+
+    if (!normalizedAccount.user) {
+      return null;
+    }
+
+    setDb((prev) => ({
+      ...prev,
+      accounts: [
+        normalizedAccount,
+        ...(Array.isArray(prev.accounts) ? prev.accounts : []).filter(
+          (existingAccount) => existingAccount.user?.toLowerCase() !== normalizedAccount.user.toLowerCase()
+        )
+      ]
+    }));
+
+    return normalizedAccount;
+  };
+
+  const deleteStaffLocally = (username) => {
+    setDb((prev) => ({
+      ...prev,
+      accounts: (Array.isArray(prev.accounts) ? prev.accounts : []).filter(
+        (account) => account.user?.toLowerCase() !== String(username || '').toLowerCase()
+      )
+    }));
+  };
+
   const deleteSupplierLocally = (id) => {
     setDb((prev) => ({
       ...prev,
@@ -519,6 +557,103 @@ export function useERPData() {
     }));
 
     return normalizedPurchase;
+  };
+
+  const deleteBillLocally = (id) => {
+    setDb((prev) => {
+      const existingBills = Array.isArray(prev.bills) ? prev.bills : [];
+      const billToDelete = existingBills.find((bill) => Number(bill.id) === Number(id));
+
+      if (!billToDelete) {
+        return prev;
+      }
+
+      const updatedProducts = (Array.isArray(prev.products) ? prev.products : []).map((product) => {
+        const matchedItem = (Array.isArray(billToDelete.items) ? billToDelete.items : []).find(
+          (item) => Number(item.id) === Number(product.id)
+        );
+
+        if (!matchedItem) {
+          return product;
+        }
+
+        return {
+          ...product,
+          stock: Number(product.stock || 0) + Number(matchedItem.qty || 0),
+          sold: Math.max(0, Number(product.sold || 0) - Number(matchedItem.qty || 0))
+        };
+      });
+
+      const updatedCustomers = (Array.isArray(prev.customers) ? prev.customers : []).flatMap((customer) => {
+        if (customer.phone !== billToDelete.phone) {
+          return [customer];
+        }
+
+        const nextVisits = Math.max(0, Number(customer.visits || 0) - 1);
+        const nextTotal = Math.max(0, Number(customer.total || 0) - Number(billToDelete.grand || 0));
+
+        if (nextVisits === 0) {
+          return [];
+        }
+
+        return [{
+          ...customer,
+          visits: nextVisits,
+          total: nextTotal
+        }];
+      });
+
+      return {
+        ...prev,
+        bills: existingBills.filter((bill) => Number(bill.id) !== Number(id)),
+        products: updatedProducts,
+        customers: updatedCustomers
+      };
+    });
+  };
+
+  const appendRefillLocally = (refill) => {
+    const normalizedRefill = {
+      id: Number(refill.id || Date.now()),
+      date: refill.date || new Date().toISOString(),
+      product: refill.product || '',
+      qty: Number(refill.qty || 0),
+      by: refill.by || refill.by_user || 'staff'
+    };
+
+    setDb((prev) => ({
+      ...prev,
+      refills: [normalizedRefill, ...(Array.isArray(prev.refills) ? prev.refills : [])],
+      products: (Array.isArray(prev.products) ? prev.products : []).map((product) => (
+        product.name === normalizedRefill.product
+          ? { ...product, stock: Number(product.stock || 0) + normalizedRefill.qty }
+          : product
+      ))
+    }));
+
+    return normalizedRefill;
+  };
+
+  const clearRefillsLocally = () => {
+    setDb((prev) => ({
+      ...prev,
+      refills: []
+    }));
+  };
+
+  const updateSettingsLocally = (settings) => {
+    const normalizedSettings = {
+      ...defaultDb.settings,
+      ...(settings || {}),
+      gst: Number(settings?.gst ?? defaultDb.settings.gst)
+    };
+
+    setDb((prev) => ({
+      ...prev,
+      settings: normalizedSettings
+    }));
+
+    return normalizedSettings;
   };
 
   return {
@@ -573,7 +708,14 @@ export function useERPData() {
         appendBillLocally(bill);
       }
     },
-    deleteBill: (id) => runMutation(`/api/bills/${id}`, { method: 'DELETE' }),
+    deleteBill: async (id) => {
+      try {
+        await runMutation(`/api/bills/${id}`, { method: 'DELETE' });
+      } catch (mutationError) {
+        console.warn('Failed to delete bill in backend, deleting locally instead', mutationError);
+        deleteBillLocally(id);
+      }
+    },
     addPurchase: async (purchase) => {
       try {
         await runMutation('/api/purchases', {
@@ -616,15 +758,29 @@ export function useERPData() {
     }),
     deletePriceHistory: (id) => runMutation(`/api/price-history/${id}`, { method: 'DELETE' }),
     clearPriceHistory: () => runMutation('/api/price-history', { method: 'DELETE' }),
-    addRefill: (refill) => runMutation('/api/refills', {
-      method: 'POST',
-      body: JSON.stringify({
-        product: refill.product,
-        qty: Number(refill.qty),
-        by_user: refill.by || refill.by_user
-      })
-    }),
-    clearRefills: () => runMutation('/api/refills', { method: 'DELETE' }),
+    addRefill: async (refill) => {
+      try {
+        await runMutation('/api/refills', {
+          method: 'POST',
+          body: JSON.stringify({
+            product: refill.product,
+            qty: Number(refill.qty),
+            by_user: refill.by || refill.by_user
+          })
+        });
+      } catch (mutationError) {
+        console.warn('Failed to save refill to backend, storing locally instead', mutationError);
+        appendRefillLocally(refill);
+      }
+    },
+    clearRefills: async () => {
+      try {
+        await runMutation('/api/refills', { method: 'DELETE' });
+      } catch (mutationError) {
+        console.warn('Failed to clear refills in backend, clearing locally instead', mutationError);
+        clearRefillsLocally();
+      }
+    },
     addLoginLog: async (log) => {
       try {
         return await apiRequest('/api/login-logs', {
@@ -658,17 +814,24 @@ export function useERPData() {
         clearLoginLogsLocally();
       }
     },
-    updateSettings: (settings) => runMutation('/api/settings', {
-      method: 'PUT',
-      body: JSON.stringify({
-        gst: Number(settings.gst || 0),
-        shop: settings.shop || '',
-        addr: settings.addr || '',
-        gstin: settings.gstin || '',
-        fssai: settings.fssai || '',
-        phone: settings.phone || ''
-      })
-    }),
+    updateSettings: async (settings) => {
+      try {
+        await runMutation('/api/settings', {
+          method: 'PUT',
+          body: JSON.stringify({
+            gst: Number(settings.gst || 0),
+            shop: settings.shop || '',
+            addr: settings.addr || '',
+            gstin: settings.gstin || '',
+            fssai: settings.fssai || '',
+            phone: settings.phone || ''
+          })
+        });
+      } catch (mutationError) {
+        console.warn('Failed to update settings in backend, updating locally instead', mutationError);
+        updateSettingsLocally(settings);
+      }
+    },
     addSupplier: async (supplier) => {
       try {
         await runMutation('/api/suppliers', {
@@ -709,16 +872,30 @@ export function useERPData() {
         deleteSupplierLocally(id);
       }
     },
-    addStaff: (account) => runMutation('/api/accounts', {
-      method: 'POST',
-      body: JSON.stringify({
-        user: account.user,
-        password: account.pass,
-        role: account.role
-      })
-    }),
-    deleteStaff: (username) => runMutation(`/api/accounts/${encodeURIComponent(username)}`, {
-      method: 'DELETE'
-    })
+    addStaff: async (account) => {
+      try {
+        await runMutation('/api/accounts', {
+          method: 'POST',
+          body: JSON.stringify({
+            user: account.user,
+            password: account.pass,
+            role: account.role
+          })
+        });
+      } catch (mutationError) {
+        console.warn('Failed to save staff in backend, storing locally instead', mutationError);
+        appendStaffLocally(account);
+      }
+    },
+    deleteStaff: async (username) => {
+      try {
+        await runMutation(`/api/accounts/${encodeURIComponent(username)}`, {
+          method: 'DELETE'
+        });
+      } catch (mutationError) {
+        console.warn('Failed to delete staff in backend, deleting locally instead', mutationError);
+        deleteStaffLocally(username);
+      }
+    }
   };
 }

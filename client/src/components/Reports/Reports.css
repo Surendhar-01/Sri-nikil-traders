@@ -1,0 +1,46 @@
+.reports-page {
+  gap: 18px;
+}
+
+.reports-card {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.reports-card::after {
+  content: '';
+  position: absolute;
+  inset: auto -24px -24px auto;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 70%);
+  pointer-events: none;
+}
+
+.reports-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+}
+
+.reports-card-sales {
+  background: linear-gradient(180deg, #fffaf5 0%, #fff2e8 100%);
+}
+
+.reports-card-stock {
+  background: linear-gradient(180deg, #f5fbff 0%, #eaf4ff 100%);
+}
+
+.reports-card-price {
+  background: linear-gradient(180deg, #f4fff7 0%, #e8f8ee 100%);
+}
+
+.reports-card-login {
+  background: linear-gradient(180deg, #faf5ff 0%, #f2e9ff 100%);
+}
+
+.reports-card-customer {
+  background: linear-gradient(180deg, #f9fafb 0%, #f0f3f7 100%);
+}

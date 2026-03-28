@@ -1,0 +1,31 @@
+.settings-staff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.settings-staff-user {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.settings-staff-delete {
+  border: 1px solid #fecaca;
+  background: #fff5f5;
+  color: var(--red);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-staff-delete:hover {
+  background: #fee2e2;
+}
+
+.settings-staff-modal {
+  width: min(480px, 95vw);
+}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import './Suppliers.css';
 
 export default function Suppliers({ db, erp, user }) {
   const [showSupplierModal, setShowSupplierModal] = useState(false);
@@ -91,17 +92,17 @@ export default function Suppliers({ db, erp, user }) {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center" style={{ marginBottom: '20px' }}>
-        <h2 className="section-title" style={{ margin: 0 }}>Supplier Management</h2>
+    <div className="suppliers-page">
+      <div className="flex justify-between items-center suppliers-header">
+        <h2 className="section-title suppliers-title">Supplier Management</h2>
         <div className="flex gap-2">
           <button className="btn btn-blue" onClick={() => setShowPurchaseModal(true)}>Record Purchase</button>
           <button className="btn btn-primary" onClick={() => setShowSupplierModal(true)}>Add Supplier</button>
         </div>
       </div>
 
-      <div className="grid grid-2 mb-6">
-        <div className="card">
+      <div className="grid grid-2 suppliers-grid">
+        <div className="card suppliers-card">
           <div className="section-title">Supplier List</div>
           <div className="table-wrap">
             <table>
@@ -124,7 +125,7 @@ export default function Suppliers({ db, erp, user }) {
                     </td>
                     <td>{supplier.contact}</td>
                     <td>{supplier.products}</td>
-                    <td className="fw-bold">₹{supplier.total.toFixed(2)}</td>
+                    <td className="fw-bold">{`\u20B9${supplier.total.toFixed(2)}`}</td>
                     <td>
                       <div className="flex gap-2">
                         <button className="btn btn-sm btn-secondary" onClick={() => openEditModal(supplier)}>Edit</button>
@@ -147,9 +148,9 @@ export default function Suppliers({ db, erp, user }) {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card suppliers-card">
           <div className="section-title">Purchase History</div>
-          <div className="table-wrap" style={{ maxHeight: '380px' }}>
+          <div className="table-wrap suppliers-history-table">
             <table>
               <thead>
                 <tr>
@@ -165,7 +166,7 @@ export default function Suppliers({ db, erp, user }) {
                     <td>{new Date(purchase.date).toLocaleDateString()}</td>
                     <td>{purchase.supplier}</td>
                     <td>{purchase.qty} {purchase.product}</td>
-                    <td>₹{purchase.amount.toFixed(2)}</td>
+                    <td>{`\u20B9${purchase.amount.toFixed(2)}`}</td>
                   </tr>
                 ))}
                 {db.purchases.length === 0 && (
@@ -181,17 +182,17 @@ export default function Suppliers({ db, erp, user }) {
 
       {showSupplierModal && (
         <div className="modal-overlay open" onClick={() => setShowSupplierModal(false)}>
-          <div className="modal" onClick={event => event.stopPropagation()}>
+          <div className="modal suppliers-modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Add New Supplier</h3>
-              <button className="modal-close" type="button" onClick={() => setShowSupplierModal(false)}>×</button>
+              <button className="modal-close" type="button" onClick={() => setShowSupplierModal(false)}>x</button>
             </div>
 
             <div className="form-group mb-3">
               <label>Supplier Name</label>
               <input
                 value={newSupplier.name}
-                onChange={event => setNewSupplier({ ...newSupplier, name: event.target.value })}
+                onChange={(event) => setNewSupplier({ ...newSupplier, name: event.target.value })}
               />
             </div>
 
@@ -200,14 +201,14 @@ export default function Suppliers({ db, erp, user }) {
                 <label>Contact</label>
                 <input
                   value={newSupplier.contact}
-                  onChange={event => setNewSupplier({ ...newSupplier, contact: event.target.value })}
+                  onChange={(event) => setNewSupplier({ ...newSupplier, contact: event.target.value })}
                 />
               </div>
               <div className="form-group">
                 <label>Products</label>
                 <input
                   value={newSupplier.products}
-                  onChange={event => setNewSupplier({ ...newSupplier, products: event.target.value })}
+                  onChange={(event) => setNewSupplier({ ...newSupplier, products: event.target.value })}
                 />
               </div>
             </div>
@@ -217,7 +218,7 @@ export default function Suppliers({ db, erp, user }) {
               <textarea
                 rows="3"
                 value={newSupplier.addr}
-                onChange={event => setNewSupplier({ ...newSupplier, addr: event.target.value })}
+                onChange={(event) => setNewSupplier({ ...newSupplier, addr: event.target.value })}
               />
             </div>
 
@@ -228,14 +229,14 @@ export default function Suppliers({ db, erp, user }) {
 
       {showPurchaseModal && (
         <div className="modal-overlay open" onClick={() => setShowPurchaseModal(false)}>
-          <div className="modal" onClick={event => event.stopPropagation()}>
+          <div className="modal suppliers-modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Record Purchase</h3>
-              <button className="modal-close" type="button" onClick={() => setShowPurchaseModal(false)}>×</button>
+              <button className="modal-close" type="button" onClick={() => setShowPurchaseModal(false)}>x</button>
             </div>
             <div className="form-group mb-3">
               <label>Supplier</label>
-              <select value={newPurchase.supplier} onChange={event => setNewPurchase({ ...newPurchase, supplier: event.target.value })}>
+              <select value={newPurchase.supplier} onChange={(event) => setNewPurchase({ ...newPurchase, supplier: event.target.value })}>
                 <option value="">-- Select --</option>
                 {db.suppliers.map((supplier) => (
                   <option key={supplier.id} value={supplier.name}>{supplier.name}</option>
@@ -244,7 +245,7 @@ export default function Suppliers({ db, erp, user }) {
             </div>
             <div className="form-group mb-3">
               <label>Product</label>
-              <select value={newPurchase.product} onChange={event => setNewPurchase({ ...newPurchase, product: event.target.value })}>
+              <select value={newPurchase.product} onChange={(event) => setNewPurchase({ ...newPurchase, product: event.target.value })}>
                 <option value="">-- Select --</option>
                 {db.products.map((product) => (
                   <option key={product.id} value={product.name}>{product.name}</option>
@@ -254,11 +255,11 @@ export default function Suppliers({ db, erp, user }) {
             <div className="form-row mb-4">
               <div className="form-group">
                 <label>Quantity</label>
-                <input type="number" value={newPurchase.qty} onChange={event => setNewPurchase({ ...newPurchase, qty: event.target.value })} />
+                <input type="number" value={newPurchase.qty} onChange={(event) => setNewPurchase({ ...newPurchase, qty: event.target.value })} />
               </div>
               <div className="form-group">
                 <label>Total Amount Paid</label>
-                <input type="number" value={newPurchase.amount} onChange={event => setNewPurchase({ ...newPurchase, amount: event.target.value })} />
+                <input type="number" value={newPurchase.amount} onChange={(event) => setNewPurchase({ ...newPurchase, amount: event.target.value })} />
               </div>
             </div>
             <button className="btn btn-blue btn-full" type="button" onClick={handleRecordPurchase}>Confirm & Update Stock</button>
@@ -268,17 +269,17 @@ export default function Suppliers({ db, erp, user }) {
 
       {showEditModal && editingSupplier && (
         <div className="modal-overlay open" onClick={() => setShowEditModal(false)}>
-          <div className="modal" onClick={event => event.stopPropagation()}>
+          <div className="modal suppliers-modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Edit Supplier</h3>
-              <button className="modal-close" type="button" onClick={() => setShowEditModal(false)}>×</button>
+              <button className="modal-close" type="button" onClick={() => setShowEditModal(false)}>x</button>
             </div>
 
             <div className="form-group mb-3">
               <label>Supplier Name</label>
               <input
                 value={editingSupplier.name}
-                onChange={event => setEditingSupplier({ ...editingSupplier, name: event.target.value })}
+                onChange={(event) => setEditingSupplier({ ...editingSupplier, name: event.target.value })}
               />
             </div>
 
@@ -287,14 +288,14 @@ export default function Suppliers({ db, erp, user }) {
                 <label>Contact</label>
                 <input
                   value={editingSupplier.contact}
-                  onChange={event => setEditingSupplier({ ...editingSupplier, contact: event.target.value })}
+                  onChange={(event) => setEditingSupplier({ ...editingSupplier, contact: event.target.value })}
                 />
               </div>
               <div className="form-group">
                 <label>Products</label>
                 <input
                   value={editingSupplier.products}
-                  onChange={event => setEditingSupplier({ ...editingSupplier, products: event.target.value })}
+                  onChange={(event) => setEditingSupplier({ ...editingSupplier, products: event.target.value })}
                 />
               </div>
             </div>
@@ -304,7 +305,7 @@ export default function Suppliers({ db, erp, user }) {
               <textarea
                 rows="3"
                 value={editingSupplier.addr}
-                onChange={event => setEditingSupplier({ ...editingSupplier, addr: event.target.value })}
+                onChange={(event) => setEditingSupplier({ ...editingSupplier, addr: event.target.value })}
               />
             </div>
 
