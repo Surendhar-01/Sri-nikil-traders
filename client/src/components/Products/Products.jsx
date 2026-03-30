@@ -4,6 +4,8 @@ import './Products.css';
 export default function Products({ db, erp }) {
   const [showModal, setShowModal] = useState(false);
   const [newProd, setNewProd] = useState({ code: '', name: '', cat: 'Groundnut', unit: 'tins', price: '', stock: '' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('name-asc');
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -12,6 +14,21 @@ export default function Products({ db, erp }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const filteredProducts = (db.products || [])
+    .filter(p => 
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      p.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.cat.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortBy === 'name-asc') return a.name.localeCompare(b.name);
+      if (sortBy === 'name-desc') return b.name.localeCompare(a.name);
+      if (sortBy === 'price-low') return a.price - b.price;
+      if (sortBy === 'price-high') return b.price - a.price;
+      return 0;
+    });
+
   const handleAdd = async () => {
     if (!newProd.name || !newProd.price) return;
 
@@ -52,11 +69,32 @@ export default function Products({ db, erp }) {
     <div>
       <div className="flex justify-between items-center" style={{ marginBottom: '20px' }}>
         <h2 className="section-title" style={{ margin: 0 }}>Product Catalog (Store View)</h2>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>Add Product +</button>
+        <div className="flex gap-2 product-catalog-controls">
+          <div className="search-box">
+            <input 
+              type="text" 
+              placeholder="Search products..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-control"
+            />
+          </div>
+          <select 
+            value={sortBy} 
+            onChange={(e) => setSortBy(e.target.value)}
+            className="sort-select"
+          >
+            <option value="name-asc">Alphabetical (A-Z)</option>
+            <option value="name-desc">Alphabetical (Z-A)</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="price-high">Price: High to Low</option>
+          </select>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>Add Product +</button>
+        </div>
       </div>
 
       <div className="product-grid">
-        {db.products.map(p => (
+        {filteredProducts.map(p => (
           <div key={p.id} className="flipkart-card">
             <div className="fc-image-box">
               <span className="fc-category-icon">{getEmoji(p.cat)}</span>

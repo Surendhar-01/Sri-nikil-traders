@@ -16,3 +16,52 @@
 .fc-meta { display: flex; justify-content: space-between; margin-bottom: 12px; }
 .fc-delete-btn { margin-top: auto; padding: 8px; border: 1px solid #e0e0e0; background: #fff; color: #d32f2f; font-weight: 600; font-size: 0.85rem; cursor: pointer; border-radius: 8px; transition: background 0.2s; }
 .fc-delete-btn:hover { background: #fef2f2; border-color: #ef4444; }
+
+.product-catalog-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-box input {
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 0.95rem;
+  transition: all 0.25s ease;
+  width: 300px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02) inset;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15), 0 2px 4px rgba(0,0,0,0.02) inset;
+  width: 340px;
+}
+
+.sort-select {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text);
+  transition: all 0.25s ease;
+  outline: none;
+  min-width: 200px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.sort-select:hover {
+  border-color: var(--accent);
+  background: var(--bg);
+}
+
+.sort-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15);
+}

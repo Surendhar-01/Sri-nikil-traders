@@ -9,8 +9,14 @@ export default function Billing({ erp, user }) {
   const [customer, setCustomer] = useState('');
   const [phone, setPhone] = useState('');
   const [payment, setPayment] = useState('Cash');
+  const [toast, setToast] = useState(null);
 
   const { db, addBill } = erp;
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -171,9 +177,9 @@ export default function Billing({ erp, user }) {
   };
 
   const handleSaveBill = async () => {
-    if (items.length === 0) return alert('Cart is empty!');
-    if (!customer.trim()) return alert('Please enter Customer Name!');
-    if (!phone.trim() || phone.length < 10) return alert('Valid 10-digit Mobile Number is required!');
+    if (items.length === 0) return showToast('Cart is empty!', 'error');
+    if (!customer.trim()) return showToast('Please enter Customer Name!', 'error');
+    if (!phone.trim() || phone.length < 10) return showToast('Valid Mobile Number is required!', 'error');
 
     const bill = {
       id: db.billSeq,
@@ -192,20 +198,20 @@ export default function Billing({ erp, user }) {
 
     try {
       await addBill(bill);
-      alert('Bill Saved Successfully!');
+      showToast('Bill Saved Successfully!');
       setItems([]);
       setCustomer('');
       setPhone('');
       setPayment('Cash');
     } catch (error) {
-      alert(error.message || 'Failed to save bill');
+      showToast(error.message || 'Failed to save bill', 'error');
     }
   };
 
   const printBill = () => {
-    if (items.length === 0) return alert('No items to print!');
-    if (!customer.trim()) return alert('Please enter Customer Name!');
-    if (!phone.trim() || phone.length < 10) return alert('Valid 10-digit Mobile Number is required!');
+    if (items.length === 0) return showToast('No items to print!', 'error');
+    if (!customer.trim()) return showToast('Please enter Customer Name!', 'error');
+    if (!phone.trim() || phone.length < 10) return showToast('Valid Mobile Number is required!', 'error');
     openBillPrintWindow({
       billNo: `SNT-${String(db.billSeq).padStart(4, '0')}`,
       date: new Date().toISOString(),
@@ -220,14 +226,25 @@ export default function Billing({ erp, user }) {
     });
   };
 
+  const isAdmin = user?.role === 'Admin';
+  const recentBills = (db.bills || [])
+    .filter(bill => isAdmin || (bill.by || bill.by_user) === user?.user)
+    .slice(0, 10);
+
   return (
-    <div
-      className="grid gap-4"
-      style={{
-        gridTemplateColumns: 'minmax(0, 1.7fr) minmax(360px, 1fr)',
-        alignItems: 'start'
-      }}
-    >
+    <>
+      {toast && (
+        <div className={`toast-msg ${toast.type}`}>
+          {toast.type === 'success' ? '✅' : '❌'} {toast.msg}
+        </div>
+      )}
+      <div
+        className="grid gap-4"
+        style={{
+          gridTemplateColumns: 'minmax(0, 1.7fr) minmax(360px, 1fr)',
+          alignItems: 'start'
+        }}
+      >
       <div style={{ minWidth: 0 }}>
         <div className="card mb-4 no-print">
           <div className="bill-header">
@@ -322,7 +339,7 @@ export default function Billing({ erp, user }) {
       <div className="card no-print" style={{ width: '100%', minWidth: 0 }}>
         <div className="section-title">Recent Bills</div>
         <div className="recent-bills-list">
-          {db.bills.slice(0, 10).map((bill) => (
+          {recentBills.map((bill) => (
             <div key={bill.id} className="card bg3 border-radius mb-1" style={{ padding: '10px', cursor: 'pointer', transition: '0.2s', border: '1px solid var(--border)' }} onClick={() => setViewBill(bill)} title="Click to view details">
               <div className="flex justify-between items-center mb-1">
                 <b className="text-accent text-sm">{bill.billNo}</b>
@@ -340,7 +357,7 @@ export default function Billing({ erp, user }) {
               </div>
             </div>
           ))}
-          {db.bills.length === 0 && <div className="text-center text-muted text-sm mt-4">No recent bills</div>}
+          {recentBills.length === 0 && <div className="text-center text-muted text-sm mt-4">No recent bills</div>}
         </div>
       </div>
 
@@ -403,5 +420,6 @@ export default function Billing({ erp, user }) {
         </div>
       )}
     </div>
+    </>
   );
 }

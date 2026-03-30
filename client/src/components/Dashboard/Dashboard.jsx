@@ -118,47 +118,50 @@ function DashboardStatIcon({ icon }) {
 }
 
 export default function Dashboard({ db, user }) {
-  const bills = db.bills || [];
+  const bills = (db.bills || []).filter((bill) => {
+    if (user?.role === 'Admin') return true;
+    return (bill.by || bill.by_user) === user?.user;
+  });
   const products = db.products || [];
-  const revenueEntries = db.revenueEntries || [];
   const isAdmin = user?.role === 'Admin';
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const currentDate = now.getDate();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
   const weekStart = getWeekStart(now);
 
-  const todayBills = bills.filter((bill) => bill.date.startsWith(todayStr));
-  const weeklyBills = bills.filter((bill) => new Date(bill.date) >= weekStart);
+  const todayBills = bills.filter((bill) => {
+    if (!bill.date) return false;
+    const d = new Date(bill.date);
+    return d.getDate() === currentDate && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
+  const weeklyBills = bills.filter((bill) => {
+    if (!bill.date) return false;
+    return new Date(bill.date) >= weekStart;
+  });
   const monthlyBills = bills.filter((bill) => {
+    if (!bill.date) return false;
     const date = new Date(bill.date);
     return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
   });
-  const yearlyBills = bills.filter((bill) => new Date(bill.date).getFullYear() === currentYear);
-
-  const todayRevenueEntries = revenueEntries.filter((entry) => entry.date.startsWith(todayStr));
-  const weeklyRevenueEntries = revenueEntries.filter((entry) => new Date(entry.date) >= weekStart);
-  const monthlyRevenueEntries = revenueEntries.filter((entry) => {
-    const date = new Date(entry.date);
-    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+  const yearlyBills = bills.filter((bill) => {
+    if (!bill.date) return false;
+    return new Date(bill.date).getFullYear() === currentYear;
   });
-  const yearlyRevenueEntries = revenueEntries.filter((entry) => new Date(entry.date).getFullYear() === currentYear);
-  const todaySales = todayBills.reduce((sum, bill) => sum + bill.grand, 0)
-    + todayRevenueEntries.reduce((sum, entry) => sum + entry.amount, 0);
-  const weeklyRevenue = weeklyBills.reduce((sum, bill) => sum + bill.grand, 0)
-    + weeklyRevenueEntries.reduce((sum, entry) => sum + entry.amount, 0);
-  const monthlyRevenue = monthlyBills.reduce((sum, bill) => sum + bill.grand, 0)
-    + monthlyRevenueEntries.reduce((sum, entry) => sum + entry.amount, 0);
-  const yearlyRevenue = yearlyBills.reduce((sum, bill) => sum + bill.grand, 0)
-    + yearlyRevenueEntries.reduce((sum, entry) => sum + entry.amount, 0);
 
-  const lowStock = products.filter((product) => product.stock <= 5);
+
+  const todaySales = todayBills.reduce((sum, bill) => sum + (bill.grand || 0), 0);
+  const weeklyRevenue = weeklyBills.reduce((sum, bill) => sum + (bill.grand || 0), 0);
+  const monthlyRevenue = monthlyBills.reduce((sum, bill) => sum + (bill.grand || 0), 0);
+  const yearlyRevenue = yearlyBills.reduce((sum, bill) => sum + (bill.grand || 0), 0);
+
+  const lowStock = products.filter((product) => (product.stock || 0) <= 5);
   const soldProducts = [...products].sort((a, b) => (b.sold || 0) - (a.sold || 0));
   const topProduct = soldProducts[0] || null;
   const topSellingProducts = soldProducts
     .filter((product) => Number(product.sold || 0) > 0)
     .slice(0, 5);
-  const totalInventoryValue = products.reduce((sum, product) => sum + (product.stock * product.price), 0);
+  const totalInventoryValue = products.reduce((sum, product) => sum + ((product.stock || 0) * (product.price || 0)), 0);
 
   const salesTrendData = {
     labels: ['6d ago', '5d ago', '4d ago', '3d ago', '2d ago', 'Yesterday', 'Today'],
@@ -187,7 +190,7 @@ export default function Dashboard({ db, user }) {
 
   return (
     <div>
-      <div className="grid grid-4 mb-4">
+      <div className={`grid ${isAdmin ? 'grid-4' : 'grid-3'} mb-4`}>
         <div className="stat-card dashboard-summary-card orange">
           <div className="stat-label">Today Sales</div>
           <div className="stat-value">{formatCurrency(todaySales)}</div>
@@ -206,13 +209,32 @@ export default function Dashboard({ db, user }) {
           <div className="stat-sub">{topProduct ? `${topProduct.sold || 0} units sold` : 'Waiting for sales data'}</div>
           <div className="stat-icon"><DashboardStatIcon icon="trophy" /></div>
         </div>
-        <div className="stat-card dashboard-summary-card red">
-          <div className="stat-label">Low Stock Items</div>
-          <div className="stat-value">{lowStock.length}</div>
-          <div className="stat-sub">{products.filter((product) => product.stock === 0).length} out of stock</div>
-          <div className="stat-icon"><DashboardStatIcon icon="warning" /></div>
-        </div>
+        {isAdmin && (
+          <div className="stat-card dashboard-summary-card red">
+            <div className="stat-label">Low Stock Items</div>
+            <div className="stat-value">{lowStock.length}</div>
+            <div className="stat-sub">{products.filter((product) => product.stock === 0).length} out of stock</div>
+            <div className="stat-icon"><DashboardStatIcon icon="warning" /></div>
+          </div>
+        )}
       </div>
+
+      {!isAdmin && (
+        <div className="grid grid-2 mb-4">
+          <div className="stat-card dashboard-summary-card red">
+            <div className="stat-label">Low Stock Items</div>
+            <div className="stat-value">{lowStock.length}</div>
+            <div className="stat-sub">{products.filter((product) => product.stock === 0).length} out of stock</div>
+            <div className="stat-icon"><DashboardStatIcon icon="warning" /></div>
+          </div>
+          <div className="stat-card dashboard-summary-card orange">
+            <div className="stat-label">Stock Value</div>
+            <div className="stat-value">{formatCurrency(totalInventoryValue)}</div>
+            <div className="stat-sub">Current on-hand</div>
+            <div className="stat-icon"><DashboardStatIcon icon="package" /></div>
+          </div>
+        </div>
+      )}
 
       {isAdmin ? (
         <div className="grid grid-4 mb-4">
@@ -243,17 +265,6 @@ export default function Dashboard({ db, user }) {
         </div>
       ) : null}
 
-      {!isAdmin ? (
-        <div className="grid grid-1 mb-4">
-          <div className="stat-card dashboard-summary-card orange">
-            <div className="stat-label">Stock Value</div>
-            <div className="stat-value">{formatCurrency(totalInventoryValue)}</div>
-            <div className="stat-sub">Current on-hand</div>
-            <div className="stat-icon"><DashboardStatIcon icon="package" /></div>
-          </div>
-        </div>
-      ) : null}
-
       <div className="grid grid-2 mb-4">
         <div className="card">
           <div className="section-title">Sales Trend</div>
@@ -273,38 +284,40 @@ export default function Dashboard({ db, user }) {
         </div>
       </div>
 
-      <div className="card">
-        <div className="section-title">Recent Transactions</div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Bill No</th>
-                <th>Customer</th>
-                <th>Amount</th>
-                <th>Method</th>
-                <th>Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bills.slice(0, 5).map((bill) => (
-                <tr key={bill.id}>
-                  <td><b>{bill.billNo}</b></td>
-                  <td>{bill.customer}</td>
-                  <td className="fw-bold">{formatCurrency(bill.grand)}</td>
-                  <td><span className="badge badge-blue">{bill.payment}</span></td>
-                  <td className="text-muted text-xs">{new Date(bill.date).toLocaleTimeString()}</td>
-                </tr>
-              ))}
-              {bills.length === 0 && (
+      {isAdmin && (
+        <div className="card">
+          <div className="section-title">Recent Transactions</div>
+          <div className="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan="5" className="text-center text-muted">No transactions yet</td>
+                  <th>Bill No</th>
+                  <th>Customer</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Time</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {bills.slice(0, 5).map((bill) => (
+                  <tr key={bill.id}>
+                    <td><b>{bill.billNo}</b></td>
+                    <td>{bill.customer}</td>
+                    <td className="fw-bold">{formatCurrency(bill.grand)}</td>
+                    <td><span className="badge badge-blue">{bill.payment}</span></td>
+                    <td className="text-muted text-xs">{new Date(bill.date).toLocaleTimeString()}</td>
+                  </tr>
+                ))}
+                {bills.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="text-center text-muted">No transactions yet</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

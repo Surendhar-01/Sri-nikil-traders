@@ -1,7 +1,12 @@
 import React from 'react';
 import './Reports.css';
 
-export default function Reports({ db }) {
+export default function Reports({ db, user }) {
+  const bills = (db.bills || []).filter((bill) => {
+    if (user?.role === 'Admin') return true;
+    return (bill.by || bill.by_user) === user?.user;
+  });
+
   const downloadCSV = (type) => {
     let csv = '';
     let filename = '';
@@ -9,8 +14,8 @@ export default function Reports({ db }) {
 
     if (type === 'sales') {
       csv = 'Bill No,Date,Customer,Phone,Payment,Items,Subtotal,CGST,SGST,Grand Total,By\n';
-      csv += db.bills.map((bill) => `${bill.billNo},${new Date(bill.date).toLocaleString()},${bill.customer},${bill.phone || ''},${bill.payment},${bill.items.length},${bill.subtotal.toFixed(2)},${bill.cgst.toFixed(2)},${bill.sgst.toFixed(2)},${bill.grand.toFixed(2)},${bill.by}`).join('\n');
-      filename = `SalesReport_${today}.csv`;
+      csv += bills.map((bill) => `${bill.billNo},${new Date(bill.date).toLocaleString()},${bill.customer},${bill.phone || ''},${bill.payment},${bill.items.length},${bill.subtotal.toFixed(2)},${bill.cgst.toFixed(2)},${bill.sgst.toFixed(2)},${bill.grand.toFixed(2)},${bill.by}`).join('\n');
+      filename = user?.role === 'Admin' ? `FullSalesReport_${today}.csv` : `MySalesReport_${user?.user}_${today}.csv`;
     } else if (type === 'stock') {
       csv = 'Product,Category,Unit,Price,Opening Stock,Sold,Current Stock,Status\n';
       csv += db.products.map((product) => `${product.name},${product.cat},${product.unit},${product.price},${(product.stock || 0) + (product.sold || 0)},${product.sold || 0},${product.stock},${product.stock === 0 ? 'Out of Stock' : product.stock <= 5 ? 'Low Stock' : 'OK'}`).join('\n');
@@ -30,10 +35,6 @@ export default function Reports({ db }) {
       csv = 'Name,Phone,Visits,Total Purchased,First Visit,Last Visit\n';
       csv += db.customers.map((customer) => `${customer.name},${customer.phone || ''},${customer.visits},${customer.total.toFixed(2)},${new Date(customer.firstVisit).toLocaleDateString()},${new Date(customer.lastVisit).toLocaleDateString()}`).join('\n');
       filename = `CustomerReport_${today}.csv`;
-    } else if (type === 'expense') {
-      csv = 'Date,Category,Description,Amount,By\n';
-      csv += db.expenses.map((expense) => `${new Date(expense.date).toLocaleDateString()},${expense.category},${expense.desc},${expense.amount},${expense.by}`).join('\n');
-      filename = `ExpenseReport_${today}.csv`;
     }
 
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -46,8 +47,8 @@ export default function Reports({ db }) {
   return (
     <div className="grid grid-3 reports-page">
       <div className="card reports-card reports-card-sales" onClick={() => downloadCSV('sales')}>
-        <div className="section-title">Sales Report</div>
-        <p className="text-muted text-sm mb-3">Total Bills: {db.bills.length}</p>
+        <div className="section-title">{user?.role === 'Admin' ? 'Sales Report (All)' : 'My Sales Report'}</div>
+        <p className="text-muted text-sm mb-3">Total Bills: {bills.length}</p>
         <button className="btn btn-primary btn-sm btn-full">Download CSV</button>
       </div>
 

@@ -40,33 +40,6 @@ const defaultProducts = [
   { id: 34, code: 'CON-100B', name: 'Coconut Oil 100g Bottle', cat: 'Coconut', unit: 'bottles', price: 50, stock: 20, sold: 0, image: 'https://placehold.co/150x150?text=100g+Bottle' }
 ];
 
-const sampleExpenses = [
-  {
-    id: 1,
-    date: '2026-03-10T09:15:00.000Z',
-    category: 'Transport',
-    desc: 'Delivery van diesel refill',
-    amount: 2450,
-    by: 'admin'
-  },
-  {
-    id: 2,
-    date: '2026-03-14T12:30:00.000Z',
-    category: 'Shop',
-    desc: 'Packing covers and carry bags',
-    amount: 1180,
-    by: 'staff'
-  },
-  {
-    id: 3,
-    date: '2026-03-21T16:45:00.000Z',
-    category: 'Maintenance',
-    desc: 'Billing printer service',
-    amount: 900,
-    by: 'admin'
-  }
-];
-
 const samplePriceHistory = [
   {
     id: 1,
@@ -98,24 +71,22 @@ const defaultDb = {
   products: defaultProducts,
   bills: [],
   customers: [],
-  suppliers: [
-    { id: 1, name: 'Sri Bhavani Oils', contact: '9876543210', products: 'Sunflower, Palm', addr: 'Erode', total: 0 },
-    { id: 2, name: 'Coimbatore Oil Traders', contact: '9988776655', products: 'Groundnut, Sesame', addr: 'Coimbatore', total: 0 }
-  ],
-  expenses: sampleExpenses,
-  revenueEntries: [],
-  purchases: [],
-  refills: [],
+  suppliers: [],
   priceHistory: samplePriceHistory,
   loginLogs: [],
   accounts: [
     { user: 'admin', pass: 'admin123', role: 'Admin' },
     { user: 'staff', pass: 'staff123', role: 'Staff' },
-    { user: 'staff1', pass: 'staff123', role: 'Staff' },
-    { user: 'staff2', pass: 'staff123', role: 'Staff' },
-    { user: 'staff3', pass: 'staff123', role: 'Staff' },
-    { user: 'staff4', pass: 'staff123', role: 'Staff' },
-    { user: 'staff5', pass: 'staff123', role: 'Staff' }
+    { user: 'staff1', pass: 'staff1', role: 'Staff' },
+    { user: 'staff2', pass: 'staff2', role: 'Staff' },
+    { user: 'staff3', pass: 'staff3', role: 'Staff' }, 
+    { user: 'staff4', pass: 'staff4', role: 'Staff' }, 
+    { user: 'staff5', pass: 'staff5', role: 'Staff' },
+    { user: 'staff6', pass: 'staff6', role: 'Staff' },
+    { user: 'staff7', pass: 'staff7', role: 'Staff' },
+    { user: 'staff8', pass: 'staff8', role: 'Staff' },
+    { user: 'staff9', pass: 'staff9', role: 'Staff' },
+    { user: 'staff10', pass: 'staff10', role: 'Staff' }
   ],
   settings: {
     gst: 5,
@@ -181,18 +152,6 @@ function normalizeDb(data) {
     total: Number(customer.total || 0)
   }));
 
-  merged.suppliers = (Array.isArray(merged.suppliers) ? merged.suppliers : []).map((supplier) => ({
-    ...supplier,
-    total: Number(supplier.total || 0)
-  }));
-
-  const incomingExpenses = Array.isArray(merged.expenses) && merged.expenses.length > 0 ? merged.expenses : sampleExpenses;
-  merged.expenses = incomingExpenses.map((expense) => ({
-    ...expense,
-    desc: expense.desc || expense.description || '',
-    by: expense.by || expense.by_user,
-    amount: Number(expense.amount || 0)
-  }));
 
   merged.purchases = (Array.isArray(merged.purchases) ? merged.purchases : []).map((purchase) => ({
     ...purchase,
@@ -302,23 +261,6 @@ export function useERPData() {
     await refreshData();
   };
 
-  const appendExpenseLocally = (expense) => {
-    const normalizedExpense = {
-      id: Number(expense.id || Date.now()),
-      date: expense.date || new Date().toISOString(),
-      category: expense.category || 'Other',
-      desc: expense.desc || expense.description || '',
-      amount: Number(expense.amount || 0),
-      by: expense.by || expense.by_user || 'staff'
-    };
-
-    setDb((prev) => ({
-      ...prev,
-      expenses: [normalizedExpense, ...(Array.isArray(prev.expenses) ? prev.expenses : [])]
-    }));
-
-    return normalizedExpense;
-  };
 
   const appendBillLocally = (bill) => {
     const normalizedBill = {
@@ -402,7 +344,7 @@ export function useERPData() {
 
   const authenticateLocally = (user, password) => {
     const account = (Array.isArray(db.accounts) ? db.accounts : []).find((candidate) => (
-      candidate.user === user && candidate.pass === password
+      candidate.user?.toLowerCase() === user?.toLowerCase() && candidate.pass === password
     ));
 
     if (!account) {
@@ -451,42 +393,7 @@ export function useERPData() {
     }));
   };
 
-  const appendSupplierLocally = (supplier) => {
-    const normalizedSupplier = {
-      id: Number(supplier.id || Date.now()),
-      name: supplier.name || '',
-      contact: supplier.contact || '',
-      products: supplier.products || '',
-      addr: supplier.addr || '',
-      total: Number(supplier.total || 0)
-    };
 
-    setDb((prev) => ({
-      ...prev,
-      suppliers: [normalizedSupplier, ...(Array.isArray(prev.suppliers) ? prev.suppliers : [])]
-    }));
-
-    return normalizedSupplier;
-  };
-
-  const updateSupplierLocally = (id, supplier) => {
-    setDb((prev) => ({
-      ...prev,
-      suppliers: (Array.isArray(prev.suppliers) ? prev.suppliers : []).map((existingSupplier) => (
-        Number(existingSupplier.id) === Number(id)
-          ? {
-              ...existingSupplier,
-              name: supplier.name || existingSupplier.name,
-              contact: supplier.contact || '',
-              products: supplier.products || '',
-              addr: supplier.addr || ''
-            }
-          : existingSupplier
-      ))
-    }));
-
-    return { id: Number(id), ...supplier };
-  };
 
   const appendStaffLocally = (account) => {
     const normalizedAccount = {
@@ -521,14 +428,6 @@ export function useERPData() {
     }));
   };
 
-  const deleteSupplierLocally = (id) => {
-    setDb((prev) => ({
-      ...prev,
-      suppliers: (Array.isArray(prev.suppliers) ? prev.suppliers : []).filter(
-        (supplier) => Number(supplier.id) !== Number(id)
-      )
-    }));
-  };
 
   const appendPurchaseLocally = (purchase) => {
     const normalizedPurchase = {
@@ -692,10 +591,12 @@ export function useERPData() {
         await runMutation('/api/bills', {
           method: 'POST',
           body: JSON.stringify({
+            billNo: bill.billNo,
             customer: bill.customer,
             phone: bill.phone,
             payment: bill.payment,
             items: bill.items,
+            date: bill.date || new Date().toISOString(),
             subtotal: Number(bill.subtotal),
             cgst: Number(bill.cgst),
             sgst: Number(bill.sgst),
@@ -731,22 +632,6 @@ export function useERPData() {
       } catch (mutationError) {
         console.warn('Failed to save purchase to backend, storing locally instead', mutationError);
         appendPurchaseLocally(purchase);
-      }
-    },
-    addExpense: async (expense) => {
-      try {
-        await runMutation('/api/expenses', {
-          method: 'POST',
-          body: JSON.stringify({
-            category: expense.category,
-            description: expense.desc || expense.description || '',
-            amount: Number(expense.amount),
-            by_user: expense.by || expense.by_user
-          })
-        });
-      } catch (mutationError) {
-        console.warn('Failed to save expense to backend, storing locally instead', mutationError);
-        appendExpenseLocally(expense);
       }
     },
     updateProductPrice: (id, newPrice, userName) => runMutation(`/api/products/${id}/price`, {
@@ -830,46 +715,6 @@ export function useERPData() {
       } catch (mutationError) {
         console.warn('Failed to update settings in backend, updating locally instead', mutationError);
         updateSettingsLocally(settings);
-      }
-    },
-    addSupplier: async (supplier) => {
-      try {
-        await runMutation('/api/suppliers', {
-          method: 'POST',
-          body: JSON.stringify({
-            name: supplier.name,
-            contact: supplier.contact || '',
-            products: supplier.products || '',
-            addr: supplier.addr || ''
-          })
-        });
-      } catch (mutationError) {
-        console.warn('Failed to save supplier to backend, storing locally instead', mutationError);
-        appendSupplierLocally(supplier);
-      }
-    },
-    updateSupplier: async (id, supplier) => {
-      try {
-        await runMutation(`/api/suppliers/${id}`, {
-          method: 'PUT',
-          body: JSON.stringify({
-            name: supplier.name,
-            contact: supplier.contact || '',
-            products: supplier.products || '',
-            addr: supplier.addr || ''
-          })
-        });
-      } catch (mutationError) {
-        console.warn('Failed to update supplier in backend, updating locally instead', mutationError);
-        updateSupplierLocally(id, supplier);
-      }
-    },
-    deleteSupplier: async (id) => {
-      try {
-        await runMutation(`/api/suppliers/${id}`, { method: 'DELETE' });
-      } catch (mutationError) {
-        console.warn('Failed to delete supplier in backend, deleting locally instead', mutationError);
-        deleteSupplierLocally(id);
       }
     },
     addStaff: async (account) => {

@@ -4,7 +4,7 @@ import './LoginActivity.css';
 export default function LoginActivity({ db, erp }) {
   const [isClearing, setIsClearing] = useState(false);
   const loginLogs = (Array.isArray(db?.loginLogs) ? db.loginLogs : []).filter(
-    (log) => String(log.role || '').toLowerCase() === 'staff'
+    (log) => String(log.role || '').toLowerCase() !== 'admin'
   );
 
   const handleClearLogs = async () => {

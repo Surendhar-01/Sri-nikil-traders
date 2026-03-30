@@ -24,3 +24,31 @@
   .no-print { display: none !important; }
 }
 #printArea { display: none; }
+
+/* Toast Notification */
+.toast-msg {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  animation: slideDownToast 0.35s ease forwards;
+}
+
+.toast-msg.success { border-bottom: 4px solid rgba(255,255,255,0.3); background: #10b981; }
+.toast-msg.error { border-bottom: 4px solid rgba(255,255,255,0.3); background: #ef4444; }
+
+@keyframes slideDownToast {
+  0% { transform: translate(-50%, -100%); opacity: 0; }
+  100% { transform: translate(-50%, 0); opacity: 1; }
+}
+

@@ -33,7 +33,9 @@ export default function Sidebar({ currentPage, setCurrentPage, user, onLogout })
       <div className="sidebar-nav">
         <div className="nav-group-label">Main</div>
         <NavItem id="dashboard" icon="📊" label="Dashboard" currentPage={currentPage} setCurrentPage={setCurrentPage} />
-        <NavItem id="billing" icon="🧾" label="Billing" currentPage={currentPage} setCurrentPage={setCurrentPage} />
+        {!isAdmin && (
+          <NavItem id="billing" icon="🧾" label="Billing" currentPage={currentPage} setCurrentPage={setCurrentPage} />
+        )}
 
         <div className="nav-group-label">Inventory</div>
         <NavItem id="products" icon="📦" label="Products" currentPage={currentPage} setCurrentPage={setCurrentPage} />
@@ -43,16 +45,20 @@ export default function Sidebar({ currentPage, setCurrentPage, user, onLogout })
         ) : null}
         <NavItem id="priceboard" icon="🪧" label="Price Board" currentPage={currentPage} setCurrentPage={setCurrentPage} />
 
-        <div className="nav-group-label">Business</div>
-        {isAdmin ? (
-          <NavItem id="sales" icon="📉" label="Sales" currentPage={currentPage} setCurrentPage={setCurrentPage} />
-        ) : null}
-        <NavItem id="customers" icon="👥" label="Customers" currentPage={currentPage} setCurrentPage={setCurrentPage} />
+        {isAdmin && (
+          <>
+            <div className="nav-group-label">Business</div>
+            <NavItem id="sales" icon="📉" label="Sales" currentPage={currentPage} setCurrentPage={setCurrentPage} />
+            <NavItem id="customers" icon="👥" label="Customers" currentPage={currentPage} setCurrentPage={setCurrentPage} />
+
+            <div className="nav-group-label">Reports</div>
+            <NavItem id="reports" icon="📁" label="Reports" currentPage={currentPage} setCurrentPage={setCurrentPage} />
+          </>
+        )}
 
         {isAdmin ? (
           <>
             <div className="nav-group-label">Admin</div>
-            <NavItem id="reports" icon="📁" label="Reports" currentPage={currentPage} setCurrentPage={setCurrentPage} />
             <NavItem id="loginlog" icon="🕐" label="Login Activity" currentPage={currentPage} setCurrentPage={setCurrentPage} />
             <NavItem id="settings" icon="⚙️" label="Settings" currentPage={currentPage} setCurrentPage={setCurrentPage} />
           </>

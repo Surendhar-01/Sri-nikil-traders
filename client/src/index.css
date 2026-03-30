@@ -39,6 +39,7 @@ h1, h2, h3, h4, h5 { font-family: 'Ubuntu', sans-serif; letter-spacing: .5px; }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
+.grid-5 { grid-template-columns: repeat(5, 1fr); }
 .stat-card {
   background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
   border: 1px solid #e8edf5;
