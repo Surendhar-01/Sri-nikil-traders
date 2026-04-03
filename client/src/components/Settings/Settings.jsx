@@ -92,6 +92,25 @@ export default function Settings({ db, erp }) {
     }
   };
 
+  const resetStaffPassword = async (username) => {
+    const nextPassword = window.prompt(`Enter new password for ${username}:`);
+    if (!nextPassword || !nextPassword.trim()) {
+      return;
+    }
+
+    if (nextPassword.trim().length < 8) {
+      alert('Password must be at least 8 characters.');
+      return;
+    }
+
+    try {
+      await erp.updateStaffPassword(username, nextPassword.trim());
+      alert(`Password updated for ${username}.`);
+    } catch (error) {
+      alert(error.message || 'Failed to update password');
+    }
+  };
+
   const backupDB = () => {
     const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
     const anchor = document.createElement('a');
@@ -204,9 +223,12 @@ export default function Settings({ db, erp }) {
                       </span>
                     </td>
                     <td>
-                      {account.user !== 'admin' && (
-                        <button className="settings-staff-delete" onClick={() => deleteStaff(account.user)}>Delete</button>
-                      )}
+                      <div className="flex gap-2">
+                        <button className="btn btn-secondary btn-sm" onClick={() => resetStaffPassword(account.user)}>Reset Password</button>
+                        {account.user !== 'admin' && (
+                          <button className="settings-staff-delete" onClick={() => deleteStaff(account.user)}>Delete</button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

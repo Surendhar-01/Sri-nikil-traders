@@ -125,15 +125,17 @@ export default function Dashboard({ db, user }) {
   const products = db.products || [];
   const isAdmin = user?.role === 'Admin';
   const now = new Date();
-  const currentDate = now.getDate();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
   const weekStart = getWeekStart(now);
 
   const todayBills = bills.filter((bill) => {
     if (!bill.date) return false;
-    const d = new Date(bill.date);
-    return d.getDate() === currentDate && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    const billDate = new Date(bill.date);
+    return billDate >= startOfToday && billDate < startOfTomorrow;
   });
   const weeklyBills = bills.filter((bill) => {
     if (!bill.date) return false;

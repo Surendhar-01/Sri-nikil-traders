@@ -15,9 +15,9 @@ export default function Login({ onLogin }) {
     }
   };
 
-  const fillDemo = (user, pass) => {
+  const fillDemo = (user) => {
     setUsername(user);
-    setPassword(pass);
+    setPassword('');
     setError(false);
   };
 
@@ -77,13 +77,13 @@ export default function Login({ onLogin }) {
           Login
         </button>
         <div style={{ marginTop: '14px', fontSize: '.78rem', color: 'var(--text3)' }}>
-          Quick Fill:
+          Quick Fill Username:
         </div>
         <div className="demo-chips">
-          <div className="chip" onClick={() => fillDemo('admin', 'admin123')}>Admin</div>
-          <div className="chip" onClick={() => fillDemo('staff1', 'staff1')}>Staff 1</div>
-          <div className="chip" onClick={() => fillDemo('staff2', 'staff2')}>Staff 2</div>
-          <div className="chip" onClick={() => fillDemo('staff5', 'staff5')}>Staff 5</div>
+          <div className="chip" onClick={() => fillDemo('admin')}>Admin</div>
+          <div className="chip" onClick={() => fillDemo('staff1')}>Staff 1</div>
+          <div className="chip" onClick={() => fillDemo('staff2')}>Staff 2</div>
+          <div className="chip" onClick={() => fillDemo('staff5')}>Staff 5</div>
         </div>
       </div>
     </div>

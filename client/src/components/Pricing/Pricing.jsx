@@ -41,20 +41,6 @@ export default function Pricing({ db, erp, user }) {
     }
   };
 
-  const handleClearLog = async () => {
-    if (!db.priceHistory.length) {
-      return;
-    }
-
-    if (confirm('Clear all price history log entries?')) {
-      try {
-        await erp.clearPriceHistory();
-      } catch (error) {
-        alert(error.message || 'Failed to clear price history');
-      }
-    }
-  };
-
   return (
     <div className="pricing-page">
       <div className="card mb-4 pricing-card">
@@ -93,7 +79,6 @@ export default function Pricing({ db, erp, user }) {
       <div className="card pricing-card">
         <div className="flex justify-between items-center mb-3 pricing-log-header">
           <div className="section-title pricing-inline-title">Price Change Log</div>
-          <button className="btn btn-danger btn-sm" type="button" onClick={handleClearLog}>Clear All</button>
         </div>
 
         <div className="table-wrap">

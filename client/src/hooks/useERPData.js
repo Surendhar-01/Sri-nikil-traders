@@ -40,53 +40,20 @@ const defaultProducts = [
   { id: 34, code: 'CON-100B', name: 'Coconut Oil 100g Bottle', cat: 'Coconut', unit: 'bottles', price: 50, stock: 20, sold: 0, image: 'https://placehold.co/150x150?text=100g+Bottle' }
 ];
 
-const samplePriceHistory = [
-  {
-    id: 1,
-    date: '2026-03-05T10:00:00.000Z',
-    product: 'Groundnut Oil (Refined) 15kg Tin',
-    old: 2860,
-    new: 2920,
-    by: 'admin'
-  },
-  {
-    id: 2,
-    date: '2026-03-12T11:20:00.000Z',
-    product: 'Sunflower Oil (Refined) 5L Can',
-    old: 910,
-    new: 940,
-    by: 'admin'
-  },
-  {
-    id: 3,
-    date: '2026-03-18T15:10:00.000Z',
-    product: 'Sesame Oil (Karmegam) 1L Packet',
-    old: 318,
-    new: 330,
-    by: 'staff'
-  }
-];
-
 const defaultDb = {
   products: defaultProducts,
   bills: [],
   customers: [],
   suppliers: [],
-  priceHistory: samplePriceHistory,
+  priceHistory: [],
   loginLogs: [],
   accounts: [
-    { user: 'admin', pass: 'admin123', role: 'Admin' },
-    { user: 'staff', pass: 'staff123', role: 'Staff' },
-    { user: 'staff1', pass: 'staff1', role: 'Staff' },
-    { user: 'staff2', pass: 'staff2', role: 'Staff' },
-    { user: 'staff3', pass: 'staff3', role: 'Staff' }, 
-    { user: 'staff4', pass: 'staff4', role: 'Staff' }, 
-    { user: 'staff5', pass: 'staff5', role: 'Staff' },
-    { user: 'staff6', pass: 'staff6', role: 'Staff' },
-    { user: 'staff7', pass: 'staff7', role: 'Staff' },
-    { user: 'staff8', pass: 'staff8', role: 'Staff' },
-    { user: 'staff9', pass: 'staff9', role: 'Staff' },
-    { user: 'staff10', pass: 'staff10', role: 'Staff' }
+    { user: 'admin', pass: 'Admin@SNT2026!', role: 'Admin' },
+    { user: 'staff1', pass: 'Staff1@SNT2026!', role: 'Staff' },
+    { user: 'staff2', pass: 'Staff2@SNT2026!', role: 'Staff' },
+    { user: 'staff3', pass: 'Staff3@SNT2026!', role: 'Staff' },
+    { user: 'staff4', pass: 'Staff4@SNT2026!', role: 'Staff' },
+    { user: 'staff5', pass: 'Staff5@SNT2026!', role: 'Staff' }
   ],
   settings: {
     gst: 5,
@@ -116,7 +83,7 @@ async function apiRequest(path, options = {}) {
   const data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
-    throw new Error(data?.detail || data?.message || `Request failed: ${response.status}`);
+    throw new Error(data?.detail || data?.message || data?.error || `Request failed: ${response.status}`);
   }
 
   return data;
@@ -126,6 +93,35 @@ function normalizeDb(data) {
   const merged = { ...defaultDb, ...(data || {}) };
   const incomingProducts = Array.isArray(merged.products) ? merged.products : defaultProducts;
   const incomingAccounts = Array.isArray(merged.accounts) ? merged.accounts : defaultDb.accounts;
+
+  const parseBillItems = (rawItems) => {
+    if (Array.isArray(rawItems)) {
+      return rawItems;
+    }
+
+    if (typeof rawItems === 'string') {
+      try {
+        const parsed = JSON.parse(rawItems);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    return [];
+  };
+
+  const getNextBillSequence = (bills) => {
+    const extractedSeq = bills
+      .map((bill) => {
+        const match = String(bill.billNo || bill.bill_no || '').match(/SNT-(\d+)/i);
+        return match ? Number(match[1]) : 0;
+      })
+      .filter((value) => Number.isFinite(value));
+
+    const maxSeq = extractedSeq.length > 0 ? Math.max(...extractedSeq) : 0;
+    return Math.max(defaultDb.billSeq, maxSeq + 1);
+  };
 
   merged.products = incomingProducts.map((product, index) => ({
     ...product,
@@ -143,13 +139,15 @@ function normalizeDb(data) {
     cgst: Number(bill.cgst || 0),
     sgst: Number(bill.sgst || 0),
     grand: Number(bill.grand || 0),
-    items: Array.isArray(bill.items) ? bill.items : []
+    items: parseBillItems(bill.items)
   }));
 
   merged.customers = (Array.isArray(merged.customers) ? merged.customers : []).map((customer) => ({
     ...customer,
     visits: Number(customer.visits || 0),
-    total: Number(customer.total || 0)
+    total: Number(customer.total || 0),
+    firstVisit: customer.firstVisit || customer.lastVisit || null,
+    lastVisit: customer.lastVisit || customer.firstVisit || null
   }));
 
 
@@ -166,7 +164,7 @@ function normalizeDb(data) {
     by: refill.by || refill.by_user
   }));
 
-  const incomingPriceHistory = Array.isArray(merged.priceHistory) && merged.priceHistory.length > 0 ? merged.priceHistory : samplePriceHistory;
+  const incomingPriceHistory = Array.isArray(merged.priceHistory) ? merged.priceHistory : [];
   merged.priceHistory = incomingPriceHistory.map((history) => ({
     ...history,
     old: Number(history.old ?? history.old_price ?? 0),
@@ -199,9 +197,18 @@ function normalizeDb(data) {
     gst: Number(merged.settings?.gst ?? defaultDb.settings.gst)
   };
 
-  merged.billSeq = Number(merged.billSeq || defaultDb.billSeq);
+  merged.billSeq = getNextBillSequence(merged.bills);
 
   return merged;
+}
+
+function makeUniqueBillNo(baseBillNo = '') {
+  const cleaned = String(baseBillNo || '').trim();
+  if (cleaned) {
+    return `${cleaned}-${Date.now().toString().slice(-5)}`;
+  }
+
+  return `SNT-${Date.now()}`;
 }
 
 function loadStoredDb() {
@@ -261,94 +268,13 @@ export function useERPData() {
     await refreshData();
   };
 
-
-  const appendBillLocally = (bill) => {
-    const normalizedBill = {
-      id: Number(bill.id || db.billSeq || Date.now()),
-      billNo: bill.billNo || `SNT-${String(db.billSeq || 1000).padStart(4, '0')}`,
-      date: bill.date || new Date().toISOString(),
-      customer: bill.customer || '',
-      phone: bill.phone || '',
-      payment: bill.payment || 'Cash',
-      subtotal: Number(bill.subtotal || 0),
-      cgst: Number(bill.cgst || 0),
-      sgst: Number(bill.sgst || 0),
-      grand: Number(bill.grand || 0),
-      by: bill.by || bill.by_user || 'staff',
-      items: (Array.isArray(bill.items) ? bill.items : []).map((item) => ({
-        id: Number(item.id),
-        name: item.name,
-        qty: Number(item.qty || 0),
-        price: Number(item.price || 0),
-        total: Number(item.total || 0)
-      }))
-    };
-
-    setDb((prev) => {
-      const existingBills = Array.isArray(prev.bills) ? prev.bills : [];
-      const existingCustomers = Array.isArray(prev.customers) ? prev.customers : [];
-      const updatedProducts = (Array.isArray(prev.products) ? prev.products : []).map((product) => {
-        const matchedItem = normalizedBill.items.find((item) => Number(item.id) === Number(product.id));
-        if (!matchedItem) {
-          return product;
-        }
-
-        return {
-          ...product,
-          stock: Math.max(0, Number(product.stock || 0) - matchedItem.qty),
-          sold: Number(product.sold || 0) + matchedItem.qty
-        };
-      });
-
-      const existingCustomer = existingCustomers.find((customer) => customer.phone === normalizedBill.phone);
-      let updatedCustomers;
-
-      if (existingCustomer) {
-        updatedCustomers = existingCustomers.map((customer) => (
-          customer.phone === normalizedBill.phone
-            ? {
-                ...customer,
-                name: normalizedBill.customer,
-                visits: Number(customer.visits || 0) + 1,
-                total: Number(customer.total || 0) + normalizedBill.grand,
-                lastVisit: normalizedBill.date
-              }
-            : customer
-        ));
-      } else {
-        updatedCustomers = [
-          {
-            id: existingCustomers.length > 0 ? Math.max(...existingCustomers.map((customer) => Number(customer.id || 0))) + 1 : 1,
-            name: normalizedBill.customer,
-            phone: normalizedBill.phone,
-            visits: 1,
-            total: normalizedBill.grand,
-            firstVisit: normalizedBill.date,
-            lastVisit: normalizedBill.date
-          },
-          ...existingCustomers
-        ];
-      }
-
-      return {
-        ...prev,
-        bills: [normalizedBill, ...existingBills],
-        products: updatedProducts,
-        customers: updatedCustomers,
-        billSeq: Number(prev.billSeq || 1000) + 1
-      };
-    });
-
-    return normalizedBill;
-  };
-
   const authenticateLocally = (user, password) => {
     const account = (Array.isArray(db.accounts) ? db.accounts : []).find((candidate) => (
-      candidate.user?.toLowerCase() === user?.toLowerCase() && candidate.pass === password
+      candidate.user?.toLowerCase() === user?.toLowerCase() && candidate.pass && candidate.pass === password
     ));
 
     if (!account) {
-      throw new Error('Invalid credentials');
+      throw new Error('Backend authentication unavailable');
     }
 
     return {
@@ -511,32 +437,47 @@ export function useERPData() {
     });
   };
 
-  const appendRefillLocally = (refill) => {
-    const normalizedRefill = {
-      id: Number(refill.id || Date.now()),
-      date: refill.date || new Date().toISOString(),
-      product: refill.product || '',
-      qty: Number(refill.qty || 0),
-      by: refill.by || refill.by_user || 'staff'
-    };
-
-    setDb((prev) => ({
-      ...prev,
-      refills: [normalizedRefill, ...(Array.isArray(prev.refills) ? prev.refills : [])],
-      products: (Array.isArray(prev.products) ? prev.products : []).map((product) => (
-        product.name === normalizedRefill.product
-          ? { ...product, stock: Number(product.stock || 0) + normalizedRefill.qty }
-          : product
-      ))
-    }));
-
-    return normalizedRefill;
-  };
-
   const clearRefillsLocally = () => {
     setDb((prev) => ({
       ...prev,
       refills: []
+    }));
+  };
+
+  const deleteRefillLocally = (id) => {
+    setDb((prev) => {
+      const existingRefills = Array.isArray(prev.refills) ? prev.refills : [];
+      const refillToDelete = existingRefills.find((refill) => Number(refill.id) === Number(id));
+
+      if (!refillToDelete) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        refills: existingRefills.filter((refill) => Number(refill.id) !== Number(id)),
+        products: (Array.isArray(prev.products) ? prev.products : []).map((product) => (
+          product.name === refillToDelete.product
+            ? { ...product, stock: Math.max(0, Number(product.stock || 0) - Number(refillToDelete.qty || 0)) }
+            : product
+        ))
+      };
+    });
+  };
+
+  const deletePriceHistoryLocally = (id) => {
+    setDb((prev) => ({
+      ...prev,
+      priceHistory: (Array.isArray(prev.priceHistory) ? prev.priceHistory : []).filter(
+        (entry) => Number(entry.id) !== Number(id)
+      )
+    }));
+  };
+
+  const clearPriceHistoryLocally = () => {
+    setDb((prev) => ({
+      ...prev,
+      priceHistory: []
     }));
   };
 
@@ -587,26 +528,40 @@ export function useERPData() {
     }),
     deleteProduct: (id) => runMutation(`/api/products/${id}`, { method: 'DELETE' }),
     addBill: async (bill) => {
+      const payload = {
+        billNo: bill.billNo || makeUniqueBillNo(),
+        customer: bill.customer,
+        phone: bill.phone,
+        payment: bill.payment,
+        items: bill.items,
+        date: bill.date || new Date().toISOString(),
+        subtotal: Number(bill.subtotal),
+        cgst: Number(bill.cgst),
+        sgst: Number(bill.sgst),
+        grand: Number(bill.grand),
+        by_user: bill.by || bill.by_user
+      };
+
       try {
         await runMutation('/api/bills', {
           method: 'POST',
-          body: JSON.stringify({
-            billNo: bill.billNo,
-            customer: bill.customer,
-            phone: bill.phone,
-            payment: bill.payment,
-            items: bill.items,
-            date: bill.date || new Date().toISOString(),
-            subtotal: Number(bill.subtotal),
-            cgst: Number(bill.cgst),
-            sgst: Number(bill.sgst),
-            grand: Number(bill.grand),
-            by_user: bill.by || bill.by_user
-          })
+          body: JSON.stringify(payload)
         });
-      } catch (mutationError) {
-        console.warn('Failed to save bill to backend, storing locally instead', mutationError);
-        appendBillLocally(bill);
+      } catch {
+        const retryPayload = {
+          ...payload,
+          billNo: makeUniqueBillNo(payload.billNo)
+        };
+
+        try {
+          await runMutation('/api/bills', {
+            method: 'POST',
+            body: JSON.stringify(retryPayload)
+          });
+        } catch (retryError) {
+          console.warn('Failed to save bill to backend', retryError);
+          throw retryError;
+        }
       }
     },
     deleteBill: async (id) => {
@@ -641,21 +596,38 @@ export function useERPData() {
         by_user: userName
       })
     }),
-    deletePriceHistory: (id) => runMutation(`/api/price-history/${id}`, { method: 'DELETE' }),
-    clearPriceHistory: () => runMutation('/api/price-history', { method: 'DELETE' }),
-    addRefill: async (refill) => {
+    deletePriceHistory: async (id) => {
       try {
-        await runMutation('/api/refills', {
-          method: 'POST',
-          body: JSON.stringify({
-            product: refill.product,
-            qty: Number(refill.qty),
-            by_user: refill.by || refill.by_user
-          })
-        });
+        await runMutation(`/api/price-history/${id}`, { method: 'DELETE' });
       } catch (mutationError) {
-        console.warn('Failed to save refill to backend, storing locally instead', mutationError);
-        appendRefillLocally(refill);
+        console.warn('Failed to delete price history in backend, deleting locally instead', mutationError);
+        deletePriceHistoryLocally(id);
+      }
+    },
+    clearPriceHistory: async () => {
+      try {
+        await runMutation('/api/price-history', { method: 'DELETE' });
+      } catch (mutationError) {
+        console.warn('Failed to clear price history in backend, clearing locally instead', mutationError);
+        clearPriceHistoryLocally();
+      }
+    },
+    addRefill: async (refill) => {
+      await runMutation('/api/refills', {
+        method: 'POST',
+        body: JSON.stringify({
+          product: refill.product,
+          qty: Number(refill.qty),
+          by_user: refill.by || refill.by_user
+        })
+      });
+    },
+    deleteRefill: async (id) => {
+      try {
+        await runMutation(`/api/refills/${id}`, { method: 'DELETE' });
+      } catch (mutationError) {
+        console.warn('Failed to delete refill in backend, deleting locally instead', mutationError);
+        deleteRefillLocally(id);
       }
     },
     clearRefills: async () => {
@@ -741,6 +713,12 @@ export function useERPData() {
         console.warn('Failed to delete staff in backend, deleting locally instead', mutationError);
         deleteStaffLocally(username);
       }
+    },
+    updateStaffPassword: async (username, password) => {
+      await apiRequest(`/api/accounts/${encodeURIComponent(username)}/password`, {
+        method: 'PUT',
+        body: JSON.stringify({ password: String(password || '') })
+      });
     }
   };
 }

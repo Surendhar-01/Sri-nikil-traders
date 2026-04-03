@@ -4,6 +4,7 @@ import './Billing.css';
 export default function Billing({ erp, user }) {
   const [items, setItems] = useState([]);
   const [viewBill, setViewBill] = useState(null);
+  const [showProductPopup, setShowProductPopup] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [qty, setQty] = useState(1);
   const [customer, setCustomer] = useState('');
@@ -22,6 +23,7 @@ export default function Billing({ erp, user }) {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         setViewBill(null);
+        setShowProductPopup(false);
       }
     };
 
@@ -29,10 +31,18 @@ export default function Billing({ erp, user }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const filteredProducts = db.products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const popupProducts = (Array.isArray(db.products) ? db.products : [])
+    .filter((product) => {
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const name = String(product.name || '').toLowerCase();
+      const code = String(product.code || '').toLowerCase();
+      return name.includes(normalizedSearch) || code.includes(normalizedSearch);
+    })
+    .slice(0, 80);
 
   const addItem = (product) => {
     const parsedQty = parseInt(qty, 10) || 1;
@@ -47,6 +57,8 @@ export default function Billing({ erp, user }) {
     setItems([...items, newItem]);
     setSearchTerm('');
     setQty(1);
+    setShowProductPopup(false);
+    showToast('Product added to cart');
   };
 
   const removeItem = (index) => {
@@ -273,25 +285,14 @@ export default function Billing({ erp, user }) {
 
         <div className="card">
           <div className="section-title">Add Product</div>
-          <div className="form-group mb-3" style={{ position: 'relative' }}>
-            <div className="flex gap-2">
-              <input
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                style={{ flex: 1 }}
-              />
-              <input type="number" value={qty} onChange={(event) => setQty(event.target.value)} min="1" style={{ width: '90px' }} />
-            </div>
-            {searchTerm && (
-              <div className="card shadow" style={{ position: 'absolute', width: '100%', zIndex: 10, marginTop: '2px', padding: '0', maxHeight: '200px', overflowY: 'auto' }}>
-                {filteredProducts.map((product) => (
-                  <div key={product.id} className="nav-item" onClick={() => addItem(product)} style={{ padding: '10px 15px', borderBottom: '1px solid var(--border)' }}>
-                    {product.name} <span style={{ marginLeft: 'auto' }}>Rs {product.price}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="form-group mb-3">
+            <input
+              placeholder="Click to select products..."
+              value={searchTerm}
+              readOnly
+              onClick={() => setShowProductPopup(true)}
+              style={{ flex: 1 }}
+            />
           </div>
 
           <div className="table-wrap mb-3">
@@ -415,6 +416,59 @@ export default function Billing({ erp, user }) {
             <div className="flex justify-end items-center mt-2">
               <button className="btn btn-secondary" onClick={() => openBillPrintWindow(viewBill)} style={{ padding: '8px 24px', marginRight: '8px' }}>Print</button>
               <button className="btn btn-blue" onClick={() => setViewBill(null)} style={{ padding: '8px 24px' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showProductPopup && (
+        <div className="modal-overlay open" onClick={() => setShowProductPopup(false)} style={{ padding: '20px' }}>
+          <div className="modal billing-product-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <div className="modal-title">Select Product</div>
+                <div className="text-muted text-sm">Choose item and it will be added to cart with selected quantity.</div>
+              </div>
+              <button className="modal-close" onClick={() => setShowProductPopup(false)}>x</button>
+            </div>
+
+            <div className="flex gap-2 mb-3">
+              <div className="form-group" style={{ flex: 1 }}>
+                <input
+                  autoFocus
+                  placeholder="Search by name or code..."
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                />
+              </div>
+              <div className="form-group" style={{ width: '120px' }}>
+                <input
+                  type="number"
+                  min="1"
+                  value={qty}
+                  onChange={(event) => setQty(Math.max(1, Number.parseInt(event.target.value, 10) || 1))}
+                  title="Quantity"
+                />
+              </div>
+            </div>
+
+            <div className="billing-product-list">
+              {popupProducts.map((product) => (
+                <button
+                  key={product.id}
+                  className="billing-product-row"
+                  type="button"
+                  onClick={() => addItem(product)}
+                >
+                  <span className="billing-product-name">{product.name}</span>
+                  <span className="billing-product-price">Rs {Number(product.price || 0).toFixed(2)}</span>
+                </button>
+              ))}
+              {popupProducts.length === 0 && (
+                <div className="text-center text-muted text-sm" style={{ padding: '12px 8px' }}>
+                  No matching products found
+                </div>
+              )}
             </div>
           </div>
         </div>

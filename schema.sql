@@ -77,6 +77,7 @@ CREATE TABLE `customers` (
   `phone` VARCHAR(50) UNIQUE,
   `visits` INT NOT NULL DEFAULT 0,
   `total` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+  `firstVisit` DATETIME,
   `lastVisit` DATETIME,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -160,12 +161,12 @@ CREATE TABLE `settings` (
 
 -- Default Accounts
 INSERT INTO `accounts` (`user`, `pass`, `role`) VALUES 
-('admin', 'admin123', 'Admin'),
-('staff1', 'staff1', 'Staff'),
-('staff2', 'staff2', 'Staff'),
-('staff3', 'staff3', 'Staff'),
-('staff4', 'staff4', 'Staff'),
-('staff5', 'staff5', 'Staff');
+('admin', 'Admin@SNT2026!', 'Admin'),
+('staff1', 'Staff1@SNT2026!', 'Staff'),
+('staff2', 'Staff2@SNT2026!', 'Staff'),
+('staff3', 'Staff3@SNT2026!', 'Staff'),
+('staff4', 'Staff4@SNT2026!', 'Staff'),
+('staff5', 'Staff5@SNT2026!', 'Staff');
 
 -- Default Settings
 INSERT INTO `settings` (`gst`, `shop`, `addr`, `gstin`, `fssai`, `phone`) VALUES 

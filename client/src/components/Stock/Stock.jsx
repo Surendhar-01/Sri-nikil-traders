@@ -41,20 +41,6 @@ export default function Stock({ db, erp, user }) {
     }
   };
 
-  const handleClearRefills = async () => {
-    if (!db.refills.length) {
-      return;
-    }
-
-    if (confirm('Clear all refill history entries?')) {
-      try {
-        await erp.clearRefills();
-      } catch (error) {
-        alert(error.message || 'Failed to clear refills');
-      }
-    }
-  };
-
   return (
     <div className="stock-page">
       <div className="card mb-4 stock-card">
@@ -96,7 +82,6 @@ export default function Stock({ db, erp, user }) {
       <div className="card stock-card">
         <div className="flex justify-between items-center mb-3 stock-history-header">
           <div className="section-title stock-inline-title">Refill History</div>
-          <button className="btn btn-danger btn-sm" type="button" onClick={handleClearRefills}>Clear All</button>
         </div>
         <div className="table-wrap">
           <table>
@@ -106,6 +91,7 @@ export default function Stock({ db, erp, user }) {
                 <th>Product</th>
                 <th>Qty</th>
                 <th>By</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -115,11 +101,27 @@ export default function Stock({ db, erp, user }) {
                   <td>{refill.product}</td>
                   <td className="text-green fw-bold">+{refill.qty}</td>
                   <td>{refill.by}</td>
+                  <td>
+                    <button
+                      className="del-btn"
+                      type="button"
+                      title="Delete refill"
+                      onClick={async () => {
+                        try {
+                          await erp.deleteRefill(refill.id);
+                        } catch (error) {
+                          alert(error.message || 'Failed to delete refill');
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
               {db.refills.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="text-center text-muted">No refill history</td>
+                  <td colSpan="5" className="text-center text-muted">No refill history</td>
                 </tr>
               )}
             </tbody>
@@ -156,6 +158,7 @@ export default function Stock({ db, erp, user }) {
           </div>
         </div>
       )}
+
     </div>
   );
 }
