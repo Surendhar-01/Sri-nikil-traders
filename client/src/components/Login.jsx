@@ -15,12 +15,6 @@ export default function Login({ onLogin }) {
     }
   };
 
-  const fillDemo = (user) => {
-    setUsername(user);
-    setPassword('');
-    setError(false);
-  };
-
   return (
     <div id="loginPage">
       <div
@@ -76,15 +70,6 @@ export default function Login({ onLogin }) {
         <button className="btn btn-primary btn-full" onClick={doLogin}>
           Login
         </button>
-        <div style={{ marginTop: '14px', fontSize: '.78rem', color: 'var(--text3)' }}>
-          Quick Fill Username:
-        </div>
-        <div className="demo-chips">
-          <div className="chip" onClick={() => fillDemo('admin')}>Admin</div>
-          <div className="chip" onClick={() => fillDemo('staff1')}>Staff 1</div>
-          <div className="chip" onClick={() => fillDemo('staff2')}>Staff 2</div>
-          <div className="chip" onClick={() => fillDemo('staff5')}>Staff 5</div>
-        </div>
       </div>
     </div>
   );

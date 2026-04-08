@@ -4,6 +4,7 @@ import './Billing.css';
 export default function Billing({ erp, user }) {
   const [items, setItems] = useState([]);
   const [viewBill, setViewBill] = useState(null);
+  const [isReviewMode, setIsReviewMode] = useState(false);
   const [showProductPopup, setShowProductPopup] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [qty, setQty] = useState(1);
@@ -11,8 +12,24 @@ export default function Billing({ erp, user }) {
   const [phone, setPhone] = useState('');
   const [payment, setPayment] = useState('Cash');
   const [toast, setToast] = useState(null);
+  const [hiddenRecentBillIds, setHiddenRecentBillIds] = useState([]);
 
   const { db, addBill } = erp;
+
+  const getNextBillSeq = (sourceBills) => {
+    const bills = Array.isArray(sourceBills) ? sourceBills : [];
+    const maxSeq = bills
+      .map((bill) => {
+        const match = String(bill.billNo || bill.bill_no || '').match(/SNT-(\d+)/i);
+        return match ? Number(match[1]) : 0;
+      })
+      .filter((value) => Number.isFinite(value))
+      .reduce((max, value) => Math.max(max, value), 999);
+
+    return Math.max(1000, maxSeq + 1);
+  };
+
+  const nextBillSeq = getNextBillSeq(db.bills);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -23,6 +40,7 @@ export default function Billing({ erp, user }) {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         setViewBill(null);
+        setIsReviewMode(false);
         setShowProductPopup(false);
       }
     };
@@ -63,6 +81,21 @@ export default function Billing({ erp, user }) {
 
   const removeItem = (index) => {
     setItems(items.filter((_, currentIndex) => currentIndex !== index));
+  };
+
+  const changeItemQty = (index, delta) => {
+    setItems((prevItems) => prevItems.map((item, currentIndex) => {
+      if (currentIndex !== index) {
+        return item;
+      }
+
+      const nextQty = Math.max(1, Number(item.qty || 1) + delta);
+      return {
+        ...item,
+        qty: nextQty,
+        total: Number(item.price || 0) * nextQty
+      };
+    }));
   };
 
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
@@ -192,10 +225,10 @@ export default function Billing({ erp, user }) {
     if (items.length === 0) return showToast('Cart is empty!', 'error');
     if (!customer.trim()) return showToast('Please enter Customer Name!', 'error');
     if (!phone.trim() || phone.length < 10) return showToast('Valid Mobile Number is required!', 'error');
+    const nextSeq = getNextBillSeq(db.bills);
 
     const bill = {
-      id: db.billSeq,
-      billNo: `SNT-${String(db.billSeq).padStart(4, '0')}`,
+      billNo: `SNT-${String(nextSeq).padStart(4, '0')}`,
       date: new Date().toISOString(),
       customer,
       phone,
@@ -224,8 +257,9 @@ export default function Billing({ erp, user }) {
     if (items.length === 0) return showToast('No items to print!', 'error');
     if (!customer.trim()) return showToast('Please enter Customer Name!', 'error');
     if (!phone.trim() || phone.length < 10) return showToast('Valid Mobile Number is required!', 'error');
+    const nextSeq = getNextBillSeq(db.bills);
     openBillPrintWindow({
-      billNo: `SNT-${String(db.billSeq).padStart(4, '0')}`,
+      billNo: `SNT-${String(nextSeq).padStart(4, '0')}`,
       date: new Date().toISOString(),
       customer,
       phone,
@@ -238,10 +272,53 @@ export default function Billing({ erp, user }) {
     });
   };
 
+  const reviewBill = () => {
+    if (items.length === 0) return showToast('No items to review!', 'error');
+    if (!customer.trim()) return showToast('Please enter Customer Name!', 'error');
+    if (!phone.trim() || phone.length < 10) return showToast('Valid Mobile Number is required!', 'error');
+    const nextSeq = getNextBillSeq(db.bills);
+
+    setViewBill({
+      billNo: `SNT-${String(nextSeq).padStart(4, '0')}`,
+      date: new Date().toISOString(),
+      customer,
+      phone,
+      payment,
+      items,
+      subtotal: netSubtotal,
+      cgst: gstAmt / 2,
+      sgst: gstAmt / 2,
+      grand: grandTotal,
+      by: user.user
+    });
+    setIsReviewMode(true);
+  };
+
   const isAdmin = user?.role === 'Admin';
+  const hideRecentBill = (billId) => {
+    setHiddenRecentBillIds((prev) => (
+      prev.includes(billId) ? prev : [...prev, billId]
+    ));
+    if (viewBill?.id === billId) {
+      setViewBill(null);
+      setIsReviewMode(false);
+    }
+    showToast('Removed from recent list');
+  };
+  const findCustomerByPhone = (value) => {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (digits.length !== 10) {
+      return null;
+    }
+
+    return (Array.isArray(db.customers) ? db.customers : []).find((existingCustomer) => (
+      String(existingCustomer.phone || '').replace(/\D/g, '') === digits
+    )) || null;
+  };
+  const todayStr = new Date().toDateString();
   const recentBills = (db.bills || [])
-    .filter(bill => isAdmin || (bill.by || bill.by_user) === user?.user)
-    .slice(0, 10);
+    .filter(bill => (isAdmin || (bill.by || bill.by_user) === user?.user) && !hiddenRecentBillIds.includes(bill.id) && new Date(bill.date).toDateString() === todayStr)
+    .slice(0, 6);
 
   return (
     <>
@@ -267,7 +344,7 @@ export default function Billing({ erp, user }) {
             <div className="bill-address">{db.settings.addr}<br />Ph: {db.settings.phone}</div>
           </div>
           <div className="form-row mb-3">
-            <div className="form-group"><label>Bill No</label><input readOnly value={`SNT-${String(db.billSeq).padStart(4, '0')}`} style={{ color: 'var(--accent)', fontWeight: 700 }} /></div>
+            <div className="form-group"><label>Bill No</label><input readOnly value={`SNT-${String(nextBillSeq).padStart(4, '0')}`} style={{ color: 'var(--accent)', fontWeight: 700 }} /></div>
             <div className="form-group"><label>Date</label><input readOnly value={new Date().toLocaleString()} /></div>
             <div className="form-group"><label>Payment</label>
               <select value={payment} onChange={(event) => setPayment(event.target.value)}>
@@ -279,12 +356,20 @@ export default function Billing({ erp, user }) {
           </div>
           <div className="form-row">
             <div className="form-group"><label>Customer Name <span className="text-red" title="Required">*</span></label><input value={customer} onChange={(event) => setCustomer(event.target.value)} placeholder="Required" /></div>
-            <div className="form-group"><label>Mobile No <span className="text-red" title="Required">*</span></label><input value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} maxLength="10" placeholder="10 Digits Required" /></div>
+            <div className="form-group"><label>Mobile No <span className="text-red" title="Required">*</span></label><input value={phone} onChange={(event) => {
+              const nextPhone = event.target.value.replace(/\D/g, '').slice(0, 10);
+              setPhone(nextPhone);
+
+              const matchedCustomer = findCustomerByPhone(nextPhone);
+              if (matchedCustomer?.name) {
+                setCustomer(matchedCustomer.name);
+              }
+            }} maxLength="10" placeholder="10 Digits Required" /></div>
           </div>
         </div>
 
         <div className="card">
-          <div className="section-title">Add Product</div>
+          <div className="section-title">Add Item</div>
           <div className="form-group mb-3">
             <input
               placeholder="Click to select products..."
@@ -297,12 +382,33 @@ export default function Billing({ erp, user }) {
 
           <div className="table-wrap mb-3">
             <table>
-              <thead><tr><th>Item</th><th>Qty</th><th>Total</th><th></th></tr></thead>
+              <thead><tr><th style={{ width: '180px' }}>Item</th><th style={{ textAlign: 'center' }}>Qty</th><th>Total</th><th></th></tr></thead>
               <tbody>
                 {items.map((item, index) => (
                   <tr key={index}>
                     <td style={{ fontSize: '.8rem' }}>{item.name}</td>
-                    <td>{item.qty}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <div className="qty-stepper">
+                        <button
+                          type="button"
+                          className="qty-stepper-btn"
+                          onClick={() => changeItemQty(index, -1)}
+                          disabled={item.qty <= 1}
+                          aria-label={`Decrease quantity of ${item.name}`}
+                        >
+                          -
+                        </button>
+                        <span className="qty-stepper-value">{item.qty}</span>
+                        <button
+                          type="button"
+                          className="qty-stepper-btn"
+                          onClick={() => changeItemQty(index, 1)}
+                          aria-label={`Increase quantity of ${item.name}`}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </td>
                     <td>Rs {item.total}</td>
                     <td style={{ textAlign: 'right' }}>
                       <button className="del-btn" onClick={() => removeItem(index)} title="Remove Item">
@@ -330,7 +436,8 @@ export default function Billing({ erp, user }) {
           </div>
 
           <div className="mt-4 flex gap-2">
-            <button className="btn btn-primary" onClick={handleSaveBill}>Save Bill</button>
+            <button className="btn btn-primary" onClick={handleSaveBill}>Save Receipt</button>
+            <button className="btn btn-secondary btn-review" onClick={reviewBill}>Review Order</button>
             <button className="btn btn-blue" onClick={printBill}>Print</button>
             <button className="btn btn-danger" onClick={() => setItems([])}>Clear</button>
           </div>
@@ -341,12 +448,12 @@ export default function Billing({ erp, user }) {
         <div className="section-title">Recent Bills</div>
         <div className="recent-bills-list">
           {recentBills.map((bill) => (
-            <div key={bill.id} className="card bg3 border-radius mb-1" style={{ padding: '10px', cursor: 'pointer', transition: '0.2s', border: '1px solid var(--border)' }} onClick={() => setViewBill(bill)} title="Click to view details">
+            <div key={bill.id} className="card bg3 border-radius mb-1" style={{ padding: '10px', cursor: 'pointer', transition: '0.2s', border: '1px solid var(--border)' }} onClick={() => { setViewBill(bill); setIsReviewMode(false); }} title="Click to view details">
               <div className="flex justify-between items-center mb-1">
                 <b className="text-accent text-sm">{bill.billNo}</b>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted">{new Date(bill.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  <button className="del-btn" style={{ padding: '2px', color: 'var(--red)', width: 'auto', height: 'auto' }} onClick={(event) => { event.stopPropagation(); if (confirm('Are you sure you want to completely delete this bill? Stock quantities will be reverted.')) erp.deleteBill(bill.id); }} title="Delete Bill">
+                  <button className="del-btn" style={{ padding: '2px', color: 'var(--red)', width: 'auto', height: 'auto' }} onClick={(event) => { event.stopPropagation(); hideRecentBill(bill.id); }} title="Remove from recent list">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 01 2-2h4a2 2 0 01 2 2v2M10 11v6M14 11v6"></path></svg>
                   </button>
                 </div>
@@ -363,14 +470,14 @@ export default function Billing({ erp, user }) {
       </div>
 
       {viewBill && (
-        <div className="modal-overlay open" onClick={() => setViewBill(null)} style={{ padding: '20px' }}>
+        <div className="modal-overlay open" onClick={() => { setViewBill(null); setIsReviewMode(false); }} style={{ padding: '20px' }}>
           <div className="modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header" style={{ marginBottom: '15px' }}>
               <div style={{ flex: 1 }}>
-                <h3 style={{ margin: 0, color: 'var(--text)' }}>Bill Details</h3>
+                <h3 style={{ margin: 0, color: 'var(--text)' }}>{isReviewMode ? 'Review Bill' : 'Bill Details'}</h3>
                 <div style={{ fontSize: '0.9rem', color: 'var(--accent)', fontWeight: 600 }}>{viewBill.billNo}</div>
               </div>
-              <button className="modal-close" onClick={() => setViewBill(null)}>x</button>
+              <button className="modal-close" onClick={() => { setViewBill(null); setIsReviewMode(false); }}>x</button>
             </div>
 
             <div style={{ paddingBottom: '15px', borderBottom: '1px solid var(--border)', marginBottom: '15px' }}>
@@ -387,7 +494,7 @@ export default function Billing({ erp, user }) {
               <table>
                 <thead>
                   <tr>
-                    <th>Item</th>
+                    <th style={{ width: '180px' }}>Item</th>
                     <th style={{ textAlign: 'right' }}>Qty</th>
                     <th style={{ textAlign: 'right' }}>Rate</th>
                     <th style={{ textAlign: 'right' }}>Total</th>
@@ -414,8 +521,7 @@ export default function Billing({ erp, user }) {
             </div>
 
             <div className="flex justify-end items-center mt-2">
-              <button className="btn btn-secondary" onClick={() => openBillPrintWindow(viewBill)} style={{ padding: '8px 24px', marginRight: '8px' }}>Print</button>
-              <button className="btn btn-blue" onClick={() => setViewBill(null)} style={{ padding: '8px 24px' }}>Close</button>
+              <button className="btn btn-blue" onClick={() => { setViewBill(null); setIsReviewMode(false); }} style={{ padding: '8px 24px' }}>Close</button>
             </div>
           </div>
         </div>
@@ -445,6 +551,7 @@ export default function Billing({ erp, user }) {
                 <input
                   type="number"
                   min="1"
+                  placeholder="Enter Quantity"
                   value={qty}
                   onChange={(event) => setQty(Math.max(1, Number.parseInt(event.target.value, 10) || 1))}
                   title="Quantity"

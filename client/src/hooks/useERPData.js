@@ -80,10 +80,35 @@ async function apiRequest(path, options = {}) {
   });
 
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
+  const contentType = response.headers.get('content-type') || '';
+  let data = null;
+
+  if (text) {
+    const looksLikeJson = contentType.includes('application/json') || contentType.includes('+json');
+
+    if (looksLikeJson) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = null;
+      }
+    } else {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = null;
+      }
+    }
+  }
 
   if (!response.ok) {
-    throw new Error(data?.detail || data?.message || data?.error || `Request failed: ${response.status}`);
+    const serverMessage = data?.detail || data?.message || data?.error;
+    const isHtmlResponse = /^\s*<!doctype html/i.test(text) || /^\s*<html/i.test(text);
+    const fallbackMessage = isHtmlResponse
+      ? `API request failed (${response.status}). Backend returned HTML instead of JSON. Check backend server and /api route.`
+      : `Request failed: ${response.status}`;
+
+    throw new Error(serverMessage || fallbackMessage);
   }
 
   return data;
@@ -289,8 +314,7 @@ export function useERPData() {
       user: log.user || log.user_name,
       role: log.role || 'Staff',
       loginTime: log.loginTime || log.login_time || new Date().toISOString(),
-      logoutTime: log.logoutTime || log.logout_time || null,
-      device: log.device || 'Desktop'
+      logoutTime: log.logoutTime || log.logout_time || null
     };
 
     setDb((prev) => ({
@@ -444,33 +468,26 @@ export function useERPData() {
     }));
   };
 
-  const deleteRefillLocally = (id) => {
-    setDb((prev) => {
-      const existingRefills = Array.isArray(prev.refills) ? prev.refills : [];
-      const refillToDelete = existingRefills.find((refill) => Number(refill.id) === Number(id));
-
-      if (!refillToDelete) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        refills: existingRefills.filter((refill) => Number(refill.id) !== Number(id)),
-        products: (Array.isArray(prev.products) ? prev.products : []).map((product) => (
-          product.name === refillToDelete.product
-            ? { ...product, stock: Math.max(0, Number(product.stock || 0) - Number(refillToDelete.qty || 0)) }
-            : product
-        ))
-      };
-    });
-  };
-
-  const deletePriceHistoryLocally = (id) => {
+  const clearBillsLocally = () => {
     setDb((prev) => ({
       ...prev,
-      priceHistory: (Array.isArray(prev.priceHistory) ? prev.priceHistory : []).filter(
-        (entry) => Number(entry.id) !== Number(id)
-      )
+      bills: [],
+      customers: [],
+      products: (Array.isArray(prev.products) ? prev.products : []).map((product) => {
+        const soldQty = Number(product.sold || 0);
+        return {
+          ...product,
+          stock: Number(product.stock || 0) + soldQty,
+          sold: 0
+        };
+      })
+    }));
+  };
+
+  const clearCustomersLocally = () => {
+    setDb((prev) => ({
+      ...prev,
+      customers: []
     }));
   };
 
@@ -572,6 +589,14 @@ export function useERPData() {
         deleteBillLocally(id);
       }
     },
+    clearBills: async () => {
+      try {
+        await runMutation('/api/bills', { method: 'DELETE' });
+      } catch (mutationError) {
+        console.warn('Failed to clear bills in backend, clearing locally instead', mutationError);
+        clearBillsLocally();
+      }
+    },
     addPurchase: async (purchase) => {
       try {
         await runMutation('/api/purchases', {
@@ -596,14 +621,7 @@ export function useERPData() {
         by_user: userName
       })
     }),
-    deletePriceHistory: async (id) => {
-      try {
-        await runMutation(`/api/price-history/${id}`, { method: 'DELETE' });
-      } catch (mutationError) {
-        console.warn('Failed to delete price history in backend, deleting locally instead', mutationError);
-        deletePriceHistoryLocally(id);
-      }
-    },
+    deletePriceHistory: (id) => runMutation(`/api/price-history/${id}`, { method: 'DELETE' }),
     clearPriceHistory: async () => {
       try {
         await runMutation('/api/price-history', { method: 'DELETE' });
@@ -622,14 +640,7 @@ export function useERPData() {
         })
       });
     },
-    deleteRefill: async (id) => {
-      try {
-        await runMutation(`/api/refills/${id}`, { method: 'DELETE' });
-      } catch (mutationError) {
-        console.warn('Failed to delete refill in backend, deleting locally instead', mutationError);
-        deleteRefillLocally(id);
-      }
-    },
+    deleteRefill: (id) => runMutation(`/api/refills/${id}`, { method: 'DELETE' }),
     clearRefills: async () => {
       try {
         await runMutation('/api/refills', { method: 'DELETE' });
@@ -645,8 +656,7 @@ export function useERPData() {
           body: JSON.stringify({
             user_name: log.user || log.user_name,
             role: log.role,
-            login_time: log.loginTime || log.login_time,
-            device: log.device
+            login_time: log.loginTime || log.login_time
           })
         });
       } catch (logError) {
@@ -663,12 +673,21 @@ export function useERPData() {
         return { id };
       }
     },
+    deleteLoginLog: (id) => runMutation(`/api/login-logs/${id}`, { method: 'DELETE' }),
     clearLoginLogs: async () => {
       try {
         await runMutation('/api/login-logs', { method: 'DELETE' });
       } catch (logError) {
         console.warn('Failed to clear login logs in backend, clearing locally instead', logError);
         clearLoginLogsLocally();
+      }
+    },
+    clearCustomers: async () => {
+      try {
+        await runMutation('/api/customers', { method: 'DELETE' });
+      } catch (mutationError) {
+        console.warn('Failed to clear customers in backend, clearing locally instead', mutationError);
+        clearCustomersLocally();
       }
     },
     updateSettings: async (settings) => {

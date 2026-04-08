@@ -128,14 +128,14 @@ export default function Products({ db, erp }) {
               <h3 style={{ margin: 0 }}>Add New Product</h3>
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
             </div>
-            <div className="form-group mb-3"><label>Product Name</label><input value={newProd.name} onChange={e=>setNewProd({...newProd, name: e.target.value})} autoFocus /></div>
+            <div className="form-group mb-3"><label>Product Name</label><input value={newProd.name} placeholder="Enter Product Name" onChange={e=>setNewProd({...newProd, name: e.target.value})} autoFocus /></div>
             <div className="form-row mb-3">
-              <div className="form-group"><label>Code</label><input value={newProd.code} onChange={e=>setNewProd({...newProd, code: e.target.value})} /></div>
+              <div className="form-group"><label>Code</label><input value={newProd.code} placeholder="Enter Product Code" onChange={e=>setNewProd({...newProd, code: e.target.value})} /></div>
               <div className="form-group"><label>Category</label><select value={newProd.cat} onChange={e=>setNewProd({...newProd, cat: e.target.value})}><option>Groundnut</option><option>Sunflower</option><option>Palm</option><option>Vanaspati</option><option>Sesame</option><option>Castor</option><option>Coconut</option></select></div>
             </div>
             <div className="form-row mb-4">
-              <div className="form-group"><label>Price</label><input type="number" value={newProd.price} onChange={e=>setNewProd({...newProd, price: e.target.value})} /></div>
-              <div className="form-group"><label>Initial Stock</label><input type="number" value={newProd.stock} onChange={e=>setNewProd({...newProd, stock: e.target.value})} /></div>
+              <div className="form-group"><label>Price</label><input type="number" value={newProd.price} placeholder="Enter Price" onChange={e=>setNewProd({...newProd, price: e.target.value})} /></div>
+              <div className="form-group"><label>Initial Stock</label><input type="number" value={newProd.stock} placeholder="Enter Initial Stock" onChange={e=>setNewProd({...newProd, stock: e.target.value})} /></div>
             </div>
             <div className="flex gap-2 mt-2">
               <button className="btn btn-primary flex-1" onClick={handleAdd}>Save Product</button>

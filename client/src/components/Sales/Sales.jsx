@@ -9,24 +9,20 @@ export default function Sales({ db, user }) {
 
   const filteredBills = (db.bills || [])
     .filter((bill) => {
-      // Role filtering
       const isMine = (bill.by || bill.by_user) === user?.user;
       const canSee = user?.role === 'Admin' || isMine;
       if (!canSee) return false;
 
-      // Search term filtering
-      const matchesSearch = 
+      const matchesSearch =
         (bill.billNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (bill.customer || '').toLowerCase().includes(searchTerm.toLowerCase());
-      
-      // Date range filtering
+
       const billDateStr = bill.date || bill.created_at;
       if (!billDateStr) return matchesSearch;
 
       const billDate = new Date(billDateStr);
       const afterStart = !startDate || billDate >= new Date(startDate);
-      // Add 23:59:59 to end date to include the entire day
-      const beforeEnd = !endDate || billDate <= new Date(endDate + 'T23:59:59');
+      const beforeEnd = !endDate || billDate <= new Date(`${endDate}T23:59:59`);
 
       return matchesSearch && afterStart && beforeEnd;
     })
@@ -42,7 +38,7 @@ export default function Sales({ db, user }) {
     });
 
   const totalSalesCount = filteredBills.length;
-  const totalSalesAmount = filteredBills.reduce((sum, b) => sum + (b.grand || 0), 0);
+  const totalSalesAmount = filteredBills.reduce((sum, bill) => sum + (bill.grand || 0), 0);
 
   return (
     <div className="card sales-page">
@@ -50,48 +46,50 @@ export default function Sales({ db, user }) {
         <div className="section-title sales-title" style={{ margin: 0, border: 'none' }}>
           {'\u{1F4CB}'} {user?.role === 'Admin' ? 'Sales History (All Bills)' : 'My Sales History'}
         </div>
-        <div className="sales-stats text-sm">
-          <span className="text-muted">Total Bills: </span>
-          <b className="text-accent">{totalSalesCount}</b> 
-          <span className="text-muted ml-3"> | Amount: </span>
-          <b className="text-accent">₹{totalSalesAmount.toFixed(2)}</b>
+        <div className="flex items-center gap-2">
+          <div className="sales-stats text-sm">
+            <span className="text-muted">Total Bills: </span>
+            <b className="text-accent">{totalSalesCount}</b>
+            <span className="text-muted ml-3"> | Amount: </span>
+            <b className="text-accent">Rs {totalSalesAmount.toFixed(2)}</b>
+          </div>
         </div>
       </div>
 
       <div className="sales-controls flex flex-wrap gap-3 mb-4 no-print">
         <div className="control-group flex-1" style={{ minWidth: '200px' }}>
           <label>Search Customer/Bill</label>
-          <input 
-            type="text" 
-            placeholder="Search..." 
+          <input
+            type="text"
+            placeholder="Search..."
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={(event) => setSearchTerm(event.target.value)}
             className="form-control"
           />
         </div>
         <div className="control-group">
           <label>From Date</label>
-          <input 
-            type="date" 
+          <input
+            type="date"
             value={startDate}
-            onChange={e => setStartDate(e.target.value)}
+            onChange={(event) => setStartDate(event.target.value)}
             className="form-control"
           />
         </div>
         <div className="control-group">
           <label>To Date</label>
-          <input 
-            type="date" 
+          <input
+            type="date"
             value={endDate}
-            onChange={e => setEndDate(e.target.value)}
+            onChange={(event) => setEndDate(event.target.value)}
             className="form-control"
           />
         </div>
         <div className="control-group" style={{ minWidth: '160px' }}>
           <label>Sort By</label>
-          <select 
-            value={sortBy} 
-            onChange={e => setSortBy(e.target.value)}
+          <select
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value)}
             className="form-control"
           >
             <option value="date-desc">Date (Newest First)</option>
@@ -113,7 +111,7 @@ export default function Sales({ db, user }) {
                 <td className="fw-bold text-accent">{bill.billNo}</td>
                 <td className="text-xs">{new Date(bill.date || bill.created_at).toLocaleString()}</td>
                 <td>{bill.customer}</td>
-                <td className="fw-bold">{`\u20B9${(bill.grand || 0).toFixed(2)}`}</td>
+                <td className="fw-bold">{`Rs ${(bill.grand || 0).toFixed(2)}`}</td>
                 <td><span className={`badge ${bill.payment === 'Cash' ? 'badge-green' : 'badge-blue'}`}>{bill.payment}</span></td>
                 <td className="text-muted text-xs"><b>{bill.by || bill.by_user || 'System'}</b></td>
               </tr>
@@ -128,6 +126,7 @@ export default function Sales({ db, user }) {
           </tbody>
         </table>
       </div>
+
     </div>
   );
 }

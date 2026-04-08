@@ -53,7 +53,7 @@ CREATE TABLE `products` (
 DROP TABLE IF EXISTS `bills`;
 CREATE TABLE `bills` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `billNo` VARCHAR(255) NOT NULL UNIQUE,
+  `billNo` VARCHAR(255) NOT NULL,
   `customer` VARCHAR(255),
   `phone` VARCHAR(20),
   `payment` VARCHAR(50),
@@ -82,15 +82,15 @@ CREATE TABLE `customers` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
-
 -- ---------------------------------------------------------
--- 7. Table: purchases (Supplier Purchases)
+-- 6. Table: sales (Item-wise Sales History)
 -- ---------------------------------------------------------
-DROP TABLE IF EXISTS `purchases`;
-CREATE TABLE `purchases` (
+DROP TABLE IF EXISTS `sales`;
+CREATE TABLE `sales` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `date` DATETIME NOT NULL,
-  `supplier` VARCHAR(255),
+  `billNo` VARCHAR(255),
+  `customer` VARCHAR(255),
   `product` VARCHAR(255),
   `qty` INT NOT NULL DEFAULT 0,
   `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
@@ -99,7 +99,7 @@ CREATE TABLE `purchases` (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------
--- 8. Table: refills (Stock Refills)
+-- 7. Table: refills (Stock Refills)
 -- ---------------------------------------------------------
 DROP TABLE IF EXISTS `refills`;
 CREATE TABLE `refills` (
@@ -112,7 +112,7 @@ CREATE TABLE `refills` (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------
--- 9. Table: price_history (Product Price Changes)
+-- 8. Table: price_history (Product Price Changes)
 -- ---------------------------------------------------------
 DROP TABLE IF EXISTS `price_history`;
 CREATE TABLE `price_history` (
@@ -126,7 +126,7 @@ CREATE TABLE `price_history` (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------
--- 10. Table: login_logs (User Activity)
+-- 9. Table: login_logs (User Activity)
 -- ---------------------------------------------------------
 DROP TABLE IF EXISTS `login_logs`;
 CREATE TABLE `login_logs` (
@@ -135,12 +135,11 @@ CREATE TABLE `login_logs` (
   `role` VARCHAR(50),
   `loginTime` DATETIME,
   `logoutTime` DATETIME,
-  `device` VARCHAR(255),
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------
--- 11. Table: settings (Shop Metadata)
+-- 10. Table: settings (Shop Metadata)
 -- ---------------------------------------------------------
 DROP TABLE IF EXISTS `settings`;
 CREATE TABLE `settings` (

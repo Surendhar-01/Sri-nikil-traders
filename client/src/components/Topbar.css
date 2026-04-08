@@ -1,5 +1,37 @@
 .topbar { background: #fff; border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
 .topbar-title { font-size: 1.4rem; font-weight: 700; letter-spacing: 1px; }
 .topbar-right { display: flex; align-items: center; gap: 12px; }
-.user-pill { display: flex; align-items: center; gap: 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: .82rem; color: var(--text); }
+.user-pill { display: flex; align-items: center; gap: 8px; background: var(--bg3); border: 2px solid var(--border); border-radius: 30px; padding: 6px 14px; font-size: .82rem; color: var(--text); }
 .user-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+
+.overall-report-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-right: 12px;
+}
+
+.overall-report-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(37, 99, 235, 0.3);
+  filter: brightness(1.1);
+}
+
+.overall-report-btn:active {
+  transform: translateY(0);
+}
+
+.overall-report-btn .icon {
+  font-size: 1rem;
+}
+

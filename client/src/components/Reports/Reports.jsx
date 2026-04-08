@@ -7,6 +7,20 @@ export default function Reports({ db, user }) {
     return (bill.by || bill.by_user) === user?.user;
   });
 
+  const formatDuration = (startTime, endTime) => {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const totalSeconds = Math.max(0, Math.floor((end - start) / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    }
+    return `${minutes}m ${seconds}s`;
+  };
+
   const downloadCSV = (type) => {
     let csv = '';
     let filename = '';
@@ -25,10 +39,10 @@ export default function Reports({ db, user }) {
       csv += db.priceHistory.map((history) => `${new Date(history.date).toLocaleDateString()},${history.product},${history.old},${history.new},${history.by}`).join('\n');
       filename = `PriceHistory_${today}.csv`;
     } else if (type === 'login') {
-      csv = '#,User,Role,Login Time,Logout Time,Duration,Device,Status\n';
+      csv = '#,User,Role,Login Time,Logout Time,Duration,Status\n';
       csv += db.loginLogs.map((log, index) => {
-        const duration = log.logoutTime ? `${Math.floor((new Date(log.logoutTime) - new Date(log.loginTime)) / 60000)}m` : 'Active';
-        return `${index + 1},${log.user},${log.role},${new Date(log.loginTime).toLocaleString()},${log.logoutTime ? new Date(log.logoutTime).toLocaleString() : 'Online'},${duration},${log.device},${log.logoutTime ? 'Ended' : 'Online'}`;
+        const duration = log.logoutTime ? formatDuration(log.loginTime, log.logoutTime) : 'Active';
+        return `${index + 1},${log.user},${log.role},${new Date(log.loginTime).toLocaleString()},${log.logoutTime ? new Date(log.logoutTime).toLocaleString() : 'Online'},${duration},${log.logoutTime ? 'Ended' : 'Online'}`;
       }).join('\n');
       filename = `LoginActivity_${today}.csv`;
     } else if (type === 'customer') {
@@ -53,8 +67,8 @@ export default function Reports({ db, user }) {
       </div>
 
       <div className="card reports-card reports-card-stock" onClick={() => downloadCSV('stock')}>
-        <div className="section-title">Stock Report</div>
-        <p className="text-muted text-sm mb-3">Low Stock: {db.products.filter((product) => product.stock <= 5).length}</p>
+        <div className="section-title">Current Stock Report</div>
+        <p className="text-muted text-sm mb-3">Total Products: {db.products.length}</p>
         <button className="btn btn-blue btn-sm btn-full">Download CSV</button>
       </div>
 

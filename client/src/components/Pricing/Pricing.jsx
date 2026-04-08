@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import ClearConfirmModal from '../ClearConfirmModal';
 import './Pricing.css';
 
 export default function Pricing({ db, erp, user }) {
   const [priceModal, setPriceModal] = useState(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   useEffect(() => {
     if (!priceModal) {
@@ -38,6 +41,22 @@ export default function Pricing({ db, erp, user }) {
       setPriceModal(null);
     } catch (error) {
       alert(error.message || 'Failed to update price');
+    }
+  };
+
+  const handleClearLog = async () => {
+    if (!db.priceHistory.length || isClearing) {
+      return;
+    }
+
+    setIsClearing(true);
+    try {
+      await erp.clearPriceHistory();
+      setShowClearConfirm(false);
+    } catch (error) {
+      alert(error.message || 'Failed to clear price history');
+    } finally {
+      setIsClearing(false);
     }
   };
 
@@ -79,6 +98,14 @@ export default function Pricing({ db, erp, user }) {
       <div className="card pricing-card">
         <div className="flex justify-between items-center mb-3 pricing-log-header">
           <div className="section-title pricing-inline-title">Price Change Log</div>
+          <button
+            className="btn btn-danger btn-sm"
+            type="button"
+            onClick={() => setShowClearConfirm(true)}
+            disabled={!db.priceHistory.length || isClearing}
+          >
+            {isClearing ? 'Clearing...' : 'Clear All'}
+          </button>
         </div>
 
         <div className="table-wrap">
@@ -161,6 +188,16 @@ export default function Pricing({ db, erp, user }) {
           </div>
         </div>
       )}
+
+      <ClearConfirmModal
+        open={showClearConfirm}
+        loading={isClearing}
+        title="Clear Price History"
+        message="Clear all price history records permanently?"
+        confirmLabel="Clear All"
+        onConfirm={handleClearLog}
+        onClose={() => setShowClearConfirm(false)}
+      />
     </div>
   );
 }

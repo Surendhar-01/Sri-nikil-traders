@@ -72,9 +72,9 @@ const defaultData = {
     { id: 3, description: 'Service revenue', amount: 320.00, date: '2026-03-08 10:45:00' },
     { id: 4, description: 'Online store promotion', amount: 490.00, date: '2026-03-11 14:30:00' }
   ],
-  purchases: [
-    { id: 1, date: '2026-03-01 10:00:00', supplier: 'Sri Bhavani Oils', product: 'Groundnut Oil (Refined) 5L Can', qty: 10, amount: 9300 },
-    { id: 2, date: '2026-03-05 14:20:00', supplier: 'Coimbatore Oil Traders', product: 'Sesame Oil (Mukiil) 15kg Tin', qty: 4, amount: 16200 }
+  sales: [
+    { id: 1, date: '2026-03-01 11:05:00', billNo: 'BILL-1001', customer: 'Alice Johnson', product: 'Groundnut Oil (Refined) 1L Packet', qty: 1, amount: 184, by_user: 'admin' },
+    { id: 2, date: '2026-03-03 15:30:00', billNo: 'BILL-1002', customer: 'Bob Singh', product: 'Groundnut Oil (Refined) 1L Bottle', qty: 1, amount: 188, by_user: 'staff' }
   ],
   refills: [
     { id: 1, date: '2026-03-07 09:00:00', product: 'Groundnut Oil (Refined) 5L Can', qty: 20, by: 'Admin' },
@@ -131,7 +131,7 @@ async function main() {
   const lines = [];
   lines.push('-- Exported from API', `-- ${new Date().toISOString()}`, 'SET FOREIGN_KEY_CHECKS=0;');
 
-  for (const table of ['users', 'accounts', 'products', 'customers', 'bills', 'revenueEntries', 'purchases', 'refills', 'priceHistory', 'loginLogs', 'settings']) {
+  for (const table of ['users', 'accounts', 'products', 'customers', 'bills', 'revenueEntries', 'sales', 'refills', 'priceHistory', 'loginLogs', 'settings']) {
     let rows = data[table];
     if (table === 'settings') {
       rows = data.settings ? [data.settings] : [];
@@ -203,14 +203,16 @@ async function main() {
   \`lastVisit\` DATETIME,
   \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );`);
-    } else if (sqlTableName === 'purchases') {
-      lines.push(`CREATE TABLE \`purchases\` (
+    } else if (sqlTableName === 'sales') {
+      lines.push(`CREATE TABLE \`sales\` (
   \`id\` INT AUTO_INCREMENT PRIMARY KEY,
   \`date\` DATETIME NOT NULL,
-  \`supplier\` VARCHAR(255),
+  \`billNo\` VARCHAR(255),
+  \`customer\` VARCHAR(255),
   \`product\` VARCHAR(255),
   \`qty\` INT NOT NULL DEFAULT 0,
   \`amount\` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+  \`by_user\` VARCHAR(100),
   \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );`);
     } else if (sqlTableName === 'refills') {

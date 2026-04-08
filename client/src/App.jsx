@@ -61,8 +61,7 @@ function App() {
         user: userData.user,
         role: userData.role,
         loginTime: new Date().toISOString(),
-        logoutTime: null,
-        device: navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'
+        logoutTime: null
       };
       
       try {

@@ -8,7 +8,7 @@ function NavItem({ id, icon, label, currentPage, setCurrentPage }) {
       onClick={() => setCurrentPage(id)}
     >
       {icon ? <span className="icon">{icon}</span> : null}
-      <span>{label}</span>
+      <span className="nav-label">{label}</span>
     </div>
   );
 }

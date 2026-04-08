@@ -61,10 +61,10 @@ function toMysqlDateTime(value) {
   const parsed = value ? new Date(value) : new Date();
   if (Number.isNaN(parsed.getTime())) {
     const now = new Date();
-    return now.toISOString().slice(0, 19).replace('T', ' ');
+    return now.toLocaleString('sv').replace('T', ' ').slice(0, 19);
   }
 
-  return parsed.toISOString().slice(0, 19).replace('T', ' ');
+  return parsed.toLocaleString('sv').replace('T', ' ').slice(0, 19);
 }
 
 async function getNextBillNo(connection) {
@@ -82,6 +82,45 @@ async function getNextBillNo(connection) {
 app.use(cors());
 app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Sri Nikil ERP API',
+    status: 'ok',
+    docs: '/docs'
+  });
+});
+
+app.get('/docs', (req, res) => {
+  res.json({
+    name: 'Sri Nikil ERP API',
+    baseUrl: '/api',
+    endpoints: [
+      'GET /api/db',
+      'POST /api/auth/login',
+      'POST /api/bills',
+      'DELETE /api/bills/:id',
+      'DELETE /api/bills',
+      'POST /api/refills',
+      'DELETE /api/refills/:id',
+      'DELETE /api/refills',
+      'PUT /api/products/:id/price',
+      'POST /api/products',
+      'DELETE /api/products/:id',
+      'DELETE /api/price-history/:id',
+      'DELETE /api/price-history',
+      'POST /api/accounts',
+      'PUT /api/accounts/:user/password',
+      'DELETE /api/accounts/:user',
+      'DELETE /api/customers',
+      'POST /api/login-logs',
+      'PUT /api/login-logs/:id/logout',
+      'DELETE /api/login-logs/:id',
+      'DELETE /api/login-logs',
+      'PUT /api/settings'
+    ]
+  });
+});
+
 // --- Initialize Database ---
 async function initializeDatabase() {
   const tempConnection = await mysql.createConnection({
@@ -90,25 +129,69 @@ async function initializeDatabase() {
     password: process.env.DB_PASSWORD,
     port: dbPort
   });
-  await tempConnection.execute(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
 
-  const [tables] = await tempConnection.execute(
-    'SELECT 1 FROM information_schema.tables WHERE table_schema = ? AND table_name = ? LIMIT 1',
-    [dbName, 'customers']
-  );
+  try {
+    // 1. Create database if it doesn't exist
+    await tempConnection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
 
-  if (tables.length > 0) {
-    const [columns] = await tempConnection.execute(
-      'SELECT 1 FROM information_schema.columns WHERE table_schema = ? AND table_name = ? AND column_name = ? LIMIT 1',
+    // 2. Select the database
+    await tempConnection.query(`USE \`${dbName}\``);
+
+    // 3. Define and ensure all required tables exist
+    const tableDefinitions = {
+      users: `CREATE TABLE IF NOT EXISTS \`users\` ( \`id\` INT AUTO_INCREMENT PRIMARY KEY, \`username\` VARCHAR(255) NOT NULL UNIQUE, \`password\` VARCHAR(255) NOT NULL, \`role\` VARCHAR(50) NOT NULL DEFAULT 'User', \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) ENGINE=InnoDB`,
+      accounts: `CREATE TABLE IF NOT EXISTS \`accounts\` ( \`id\` INT AUTO_INCREMENT PRIMARY KEY, \`user\` VARCHAR(255) NOT NULL UNIQUE, \`pass\` VARCHAR(255) NOT NULL, \`role\` VARCHAR(50) NOT NULL DEFAULT 'Staff', \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) ENGINE=InnoDB`,
+      products: `CREATE TABLE IF NOT EXISTS \`products\` ( \`id\` INT AUTO_INCREMENT PRIMARY KEY, \`name\` VARCHAR(255) NOT NULL, \`code\` VARCHAR(100) UNIQUE, \`cat\` VARCHAR(100), \`unit\` VARCHAR(50), \`price\` DECIMAL(10, 2) NOT NULL DEFAULT 0.00, \`stock\` INT NOT NULL DEFAULT 0, \`sold\` INT NOT NULL DEFAULT 0, \`image\` TEXT, \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) ENGINE=InnoDB`,
+      bills: `CREATE TABLE IF NOT EXISTS \`bills\` ( \`id\` INT AUTO_INCREMENT PRIMARY KEY, \`billNo\` VARCHAR(255) NOT NULL, \`customer\` VARCHAR(255), \`phone\` VARCHAR(20), \`payment\` VARCHAR(50), \`date\` DATETIME NOT NULL, \`subtotal\` DECIMAL(10, 2) NOT NULL DEFAULT 0.00, \`cgst\` DECIMAL(10, 2) NOT NULL DEFAULT 0.00, \`sgst\` DECIMAL(10, 2) NOT NULL DEFAULT 0.00, \`grand\` DECIMAL(10, 2) NOT NULL DEFAULT 0.00, \`items\` LONGTEXT, \`by_user\` VARCHAR(100), \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) ENGINE=InnoDB`,
+      customers: `CREATE TABLE IF NOT EXISTS \`customers\` ( \`id\` INT AUTO_INCREMENT PRIMARY KEY, \`name\` VARCHAR(255) NOT NULL, \`phone\` VARCHAR(50) UNIQUE, \`visits\` INT NOT NULL DEFAULT 0, \`total\` DECIMAL(12, 2) NOT NULL DEFAULT 0.00, \`firstVisit\` DATETIME, \`lastVisit\` DATETIME, \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) ENGINE=InnoDB`,
+      sales: `CREATE TABLE IF NOT EXISTS \`sales\` ( \`id\` INT AUTO_INCREMENT PRIMARY KEY, \`date\` DATETIME NOT NULL, \`billNo\` VARCHAR(255), \`customer\` VARCHAR(255), \`product\` VARCHAR(255), \`qty\` INT NOT NULL DEFAULT 0, \`amount\` DECIMAL(12, 2) NOT NULL DEFAULT 0.00, \`by_user\` VARCHAR(100), \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) ENGINE=InnoDB`,
+      refills: `CREATE TABLE IF NOT EXISTS \`refills\` ( \`id\` INT AUTO_INCREMENT PRIMARY KEY, \`date\` DATETIME NOT NULL, \`product\` VARCHAR(255), \`qty\` INT NOT NULL DEFAULT 0, \`by\` VARCHAR(100), \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) ENGINE=InnoDB`,
+      price_history: `CREATE TABLE IF NOT EXISTS \`price_history\` ( \`id\` INT AUTO_INCREMENT PRIMARY KEY, \`date\` DATETIME NOT NULL, \`product\` VARCHAR(255), \`old\` DECIMAL(12, 2) NOT NULL DEFAULT 0.00, \`new\` DECIMAL(12, 2) NOT NULL DEFAULT 0.00, \`by\` VARCHAR(100), \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) ENGINE=InnoDB`,
+      login_logs: `CREATE TABLE IF NOT EXISTS \`login_logs\` ( \`id\` INT AUTO_INCREMENT PRIMARY KEY, \`user\` VARCHAR(255), \`role\` VARCHAR(50), \`loginTime\` DATETIME, \`logoutTime\` DATETIME, \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) ENGINE=InnoDB`,
+      settings: `CREATE TABLE IF NOT EXISTS \`settings\` ( \`id\` INT AUTO_INCREMENT PRIMARY KEY, \`gst\` DECIMAL(5, 2) NOT NULL DEFAULT 0.00, \`shop\` VARCHAR(255), \`addr\` TEXT, \`gstin\` VARCHAR(100), \`fssai\` VARCHAR(100), \`phone\` VARCHAR(100), \`logo\` TEXT, \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ) ENGINE=InnoDB`
+    };
+
+    for (const [tableName, query] of Object.entries(tableDefinitions)) {
+      try {
+        await tempConnection.query(query);
+      } catch (err) {
+        console.warn(`Failed to create/verify table ${tableName}:`, err.message);
+      }
+    }
+
+    // 4. Handle migrations / refinements
+    // firstVisit for customers
+    const [customerCols] = await tempConnection.query(
+      'SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = ? AND table_name = ? AND column_name = ?',
       [dbName, 'customers', 'firstVisit']
     );
-
-    if (columns.length === 0) {
-      await tempConnection.execute(`ALTER TABLE \`${dbName}\`.\`customers\` ADD COLUMN firstVisit DATETIME NULL AFTER total`);
+    if (customerCols.length === 0) {
+      await tempConnection.query('ALTER TABLE `customers` ADD COLUMN firstVisit DATETIME NULL AFTER total');
     }
-  }
 
-  await tempConnection.end();
+    // billNo uniqueness removal (if desired by earlier code logic)
+    const [billNoUniqueIndexes] = await tempConnection.query(
+      `SELECT INDEX_NAME FROM information_schema.statistics WHERE table_schema = ? AND table_name = 'bills' AND column_name = 'billNo' AND non_unique = 0`,
+      [dbName]
+    );
+    for (const indexRow of billNoUniqueIndexes) {
+      if (indexRow?.INDEX_NAME) {
+        await tempConnection.query(`ALTER TABLE \`bills\` DROP INDEX \`${indexRow.INDEX_NAME}\``);
+      }
+    }
+
+    // login_logs device column cleanup
+    const [deviceCols] = await tempConnection.query(
+      'SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = ? AND table_name = ? AND column_name = ?',
+      [dbName, 'login_logs', 'device']
+    );
+    if (deviceCols.length > 0) {
+      await tempConnection.query('ALTER TABLE `login_logs` DROP COLUMN `device`');
+    }
+
+  } finally {
+    await tempConnection.end();
+  }
 }
 
 // --- Database Connection Pool ---
@@ -150,17 +233,17 @@ app.get('/api/db', async (req, res) => {
     const connection = await pool.getConnection();
     try {
       // Fetch all data from tables in parallel for efficiency
-      const [products, bills, users, customers, purchases, refills, priceHistory, accounts, settings, loginLogs] = await Promise.all([
+      const [products, bills, users, customers, sales, refills, priceHistory, accounts, settings, loginLogs] = await Promise.all([
         connection.query('SELECT * FROM products ORDER BY id DESC'),
         connection.query('SELECT * FROM bills ORDER BY date DESC'),
         connection.query('SELECT * FROM users'),
         connection.query('SELECT * FROM customers ORDER BY id DESC'),
-        connection.query('SELECT * FROM purchases ORDER BY date DESC'),
+        connection.query('SELECT * FROM sales ORDER BY date DESC'),
         connection.query('SELECT * FROM refills ORDER BY date DESC'),
         connection.query('SELECT * FROM price_history ORDER BY date DESC'),
         connection.query('SELECT id, user, role FROM accounts ORDER BY id ASC'),
         connection.query('SELECT * FROM settings LIMIT 1'),
-        connection.query('SELECT * FROM login_logs ORDER BY id DESC')
+        connection.query("SELECT * FROM login_logs WHERE LOWER(TRIM(COALESCE(role, ''))) <> 'admin' ORDER BY id DESC")
       ]);
 
       // Send the data back in the format the frontend expects
@@ -169,7 +252,7 @@ app.get('/api/db', async (req, res) => {
         bills: bills[0],
         users: users[0],
         customers: customers[0],
-        purchases: purchases[0],
+        sales: sales[0],
         refills: refills[0],
         priceHistory: priceHistory[0],
         accounts: accounts[0],
@@ -227,17 +310,20 @@ app.post('/api/bills', async (req, res) => {
   try {
     await connection.beginTransaction();
 
+    const saleDate = toMysqlDateTime(date);
+
     let billNoToUse = String(billNo || '').trim();
     if (!billNoToUse) {
       billNoToUse = await getNextBillNo(connection);
     } else {
-      const [existing] = await connection.query('SELECT id FROM bills WHERE billNo = ? LIMIT 1', [billNoToUse]);
+      const [existing] = await connection.query(
+        'SELECT id FROM bills WHERE billNo = ? LIMIT 1',
+        [billNoToUse]
+      );
       if (existing.length > 0) {
         billNoToUse = await getNextBillNo(connection);
       }
     }
-
-    const saleDate = toMysqlDateTime(date);
 
     const [result] = await connection.query(
       'INSERT INTO bills (billNo, customer, phone, payment, date, subtotal, cgst, sgst, grand, items, by_user, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
@@ -250,6 +336,11 @@ app.post('/api/bills', async (req, res) => {
         await connection.query(
           'UPDATE products SET stock = GREATEST(0, stock - ?), sold = sold + ? WHERE id = ?',
           [item.qty, item.qty, item.id]
+        );
+        // Insert into item-wise sales table
+        await connection.query(
+          'INSERT INTO sales (date, billNo, customer, product, qty, amount, by_user, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
+          [saleDate, billNoToUse, customer || null, item.name, item.qty, item.total || (item.qty * item.price), by_user || null]
         );
       }
     }
@@ -300,6 +391,7 @@ app.delete('/api/bills/:id', async (req, res) => {
 
     // 3. Delete the bill
     await connection.query('DELETE FROM bills WHERE id = ?', [req.params.id]);
+    await connection.query('DELETE FROM sales WHERE billNo = ?', [bill.billNo]);
 
     await connection.commit();
     res.json({ success: true });
@@ -312,17 +404,50 @@ app.delete('/api/bills/:id', async (req, res) => {
   }
 });
 
-app.post('/api/purchases', async (req, res) => {
-  const { supplier, product, qty, amount, date } = req.body;
+app.delete('/api/bills', async (req, res) => {
+  const connection = await pool.getConnection();
   try {
-    const [result] = await pool.query(
-      'INSERT INTO purchases (supplier, product, qty, amount, date, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
-      [supplier, product, qty, amount, date || new Date()]
-    );
-    res.json({ id: result.insertId });
+    await connection.beginTransaction();
+
+    const [bills] = await connection.query('SELECT items FROM bills');
+    const rollbackByProductId = new Map();
+
+    for (const bill of bills) {
+      const parsedItems = typeof bill.items === 'string' ? JSON.parse(bill.items || '[]') : (bill.items || []);
+      if (!Array.isArray(parsedItems)) {
+        continue;
+      }
+
+      for (const item of parsedItems) {
+        const productId = Number(item.id);
+        const qty = Number(item.qty || 0);
+        if (!Number.isFinite(productId) || !Number.isFinite(qty) || qty <= 0) {
+          continue;
+        }
+
+        rollbackByProductId.set(productId, (rollbackByProductId.get(productId) || 0) + qty);
+      }
+    }
+
+    for (const [productId, qty] of rollbackByProductId.entries()) {
+      await connection.query(
+        'UPDATE products SET stock = stock + ?, sold = GREATEST(0, sold - ?) WHERE id = ?',
+        [qty, qty, productId]
+      );
+    }
+
+    await connection.query('DELETE FROM bills');
+    await connection.query('DELETE FROM customers');
+    await connection.query('DELETE FROM sales');
+
+    await connection.commit();
+    res.json({ success: true });
   } catch (error) {
-    console.error('Failed to insert purchase:', error);
-    res.status(500).json({ error: 'Unable to save purchase' });
+    if (connection) await connection.rollback();
+    console.error('Failed to clear bills:', error);
+    res.status(500).json({ error: 'Unable to clear bills' });
+  } finally {
+    if (connection) connection.release();
   }
 });
 
@@ -394,6 +519,16 @@ app.delete('/api/refills/:id', async (req, res) => {
     res.status(500).json({ error: 'Unable to delete refill' });
   } finally {
     if (connection) connection.release();
+  }
+});
+
+app.delete('/api/refills', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM refills');
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to clear refills:', error);
+    res.status(500).json({ error: 'Unable to clear refills' });
   }
 });
 
@@ -550,12 +685,28 @@ app.delete('/api/accounts/:user', async (req, res) => {
   }
 });
 
+app.delete('/api/customers', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM customers');
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to clear customers:', error);
+    res.status(500).json({ error: 'Unable to clear customers' });
+  }
+});
+
 app.post('/api/login-logs', async (req, res) => {
-  const { user_name, role, device } = req.body;
+  const { user_name, role } = req.body;
+  const normalizedRole = String(role || '').trim().toLowerCase();
+
+  if (normalizedRole === 'admin') {
+    return res.json({ skipped: true });
+  }
+
   try {
     const [result] = await pool.query(
-      'INSERT INTO login_logs (user, role, loginTime, device, created_at) VALUES (?, ?, NOW(), ?, NOW())',
-      [user_name, role, device]
+      'INSERT INTO login_logs (user, role, loginTime, created_at) VALUES (?, ?, NOW(), NOW())',
+      [user_name, role]
     );
     res.json({ id: result.insertId });
   } catch (error) {
@@ -571,6 +722,34 @@ app.put('/api/login-logs/:id/logout', async (req, res) => {
   } catch (error) {
     console.error('Failed to update login log:', error);
     res.status(500).json({ error: 'Unable to update login log' });
+  }
+});
+
+app.delete('/api/login-logs/:id', async (req, res) => {
+  const logId = Number(req.params.id);
+  if (!Number.isFinite(logId)) {
+    return res.status(400).json({ error: 'Valid login log id is required' });
+  }
+
+  try {
+    const [result] = await pool.query('DELETE FROM login_logs WHERE id = ?', [logId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Login log not found' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete login log:', error);
+    res.status(500).json({ error: 'Unable to delete login log' });
+  }
+});
+
+app.delete('/api/login-logs', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM login_logs');
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to clear login logs:', error);
+    res.status(500).json({ error: 'Unable to clear login logs' });
   }
 });
 

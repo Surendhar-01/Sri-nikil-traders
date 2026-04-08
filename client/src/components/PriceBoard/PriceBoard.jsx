@@ -19,19 +19,10 @@ export default function PriceBoard({ db }) {
   return (
     <div className="price-board">
       <div className="price-board-shell">
-        <div className="price-board-pills">
-          <span className="price-board-pill">Daily Oil Rates</span>
-          <span className="price-board-pill">Store Display Board</span>
-          <span className="price-board-pill">{formatDate(now)}</span>
-        </div>
-
         <div className="price-board-hero">
           <div className="price-board-copy">
             <div className="price-board-kicker">Sri Nikil Tradings</div>
             <h2 className="price-board-title">Today's Price Board</h2>
-            <div className="price-board-subtitle">
-              Clear, customer-friendly oil pricing designed for quick viewing at the counter.
-            </div>
           </div>
 
           <div className="price-board-update-card">
@@ -63,7 +54,6 @@ export default function PriceBoard({ db }) {
 
                 <div className="price-card-bottom">
                   <div className="price-card-unit">{product.unit.toUpperCase()}</div>
-                  <div className="price-card-dot">.</div>
                 </div>
               </div>
             );

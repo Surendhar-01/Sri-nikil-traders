@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import ClearConfirmModal from '../ClearConfirmModal';
 import './Stock.css';
 
 export default function Stock({ db, erp, user }) {
   const [refillProduct, setRefillProduct] = useState(null);
   const [refillQty, setRefillQty] = useState('');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   useEffect(() => {
     if (!refillProduct) {
@@ -41,6 +44,22 @@ export default function Stock({ db, erp, user }) {
     }
   };
 
+  const handleClearRefills = async () => {
+    if (!db.refills.length || isClearing) {
+      return;
+    }
+
+    setIsClearing(true);
+    try {
+      await erp.clearRefills();
+      setShowClearConfirm(false);
+    } catch (error) {
+      alert(error.message || 'Failed to clear refill history');
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
   return (
     <div className="stock-page">
       <div className="card mb-4 stock-card">
@@ -50,9 +69,9 @@ export default function Stock({ db, erp, user }) {
             <thead>
               <tr>
                 <th>Product</th>
-                <th>Opening</th>
+                <th>Opening Stock</th>
                 <th>Sold</th>
-                <th>Current</th>
+                <th>Current Stock</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
@@ -82,6 +101,14 @@ export default function Stock({ db, erp, user }) {
       <div className="card stock-card">
         <div className="flex justify-between items-center mb-3 stock-history-header">
           <div className="section-title stock-inline-title">Refill History</div>
+          <button
+            className="btn btn-danger btn-sm"
+            type="button"
+            onClick={() => setShowClearConfirm(true)}
+            disabled={!db.refills.length || isClearing}
+          >
+            {isClearing ? 'Clearing...' : 'Clear All'}
+          </button>
         </div>
         <div className="table-wrap">
           <table>
@@ -158,6 +185,16 @@ export default function Stock({ db, erp, user }) {
           </div>
         </div>
       )}
+
+      <ClearConfirmModal
+        open={showClearConfirm}
+        loading={isClearing}
+        title="Clear Refill History"
+        message="Clear all refill history records permanently?"
+        confirmLabel="Clear All"
+        onConfirm={handleClearRefills}
+        onClose={() => setShowClearConfirm(false)}
+      />
 
     </div>
   );

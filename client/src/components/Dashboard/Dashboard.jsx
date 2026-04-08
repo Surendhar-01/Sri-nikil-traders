@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -118,6 +118,9 @@ function DashboardStatIcon({ icon }) {
 }
 
 export default function Dashboard({ db, user }) {
+  const [showLowStockPopup, setShowLowStockPopup] = useState(false);
+  const [showTodaySalesPopup, setShowTodaySalesPopup] = useState(false);
+
   const bills = (db.bills || []).filter((bill) => {
     if (user?.role === 'Admin') return true;
     return (bill.by || bill.by_user) === user?.user;
@@ -193,7 +196,7 @@ export default function Dashboard({ db, user }) {
   return (
     <div>
       <div className={`grid ${isAdmin ? 'grid-4' : 'grid-3'} mb-4`}>
-        <div className="stat-card dashboard-summary-card orange">
+        <div className="stat-card dashboard-summary-card orange" onClick={() => setShowTodaySalesPopup(true)} style={{ cursor: 'pointer' }}>
           <div className="stat-label">Today Sales</div>
           <div className="stat-value">{formatCurrency(todaySales)}</div>
           <div className="stat-sub">{todayBills.length} bills today</div>
@@ -212,7 +215,7 @@ export default function Dashboard({ db, user }) {
           <div className="stat-icon"><DashboardStatIcon icon="trophy" /></div>
         </div>
         {isAdmin && (
-          <div className="stat-card dashboard-summary-card red">
+          <div className="stat-card dashboard-summary-card red" onClick={() => setShowLowStockPopup(true)} style={{ cursor: 'pointer' }}>
             <div className="stat-label">Low Stock Items</div>
             <div className="stat-value">{lowStock.length}</div>
             <div className="stat-sub">{products.filter((product) => product.stock === 0).length} out of stock</div>
@@ -223,7 +226,7 @@ export default function Dashboard({ db, user }) {
 
       {!isAdmin && (
         <div className="grid grid-2 mb-4">
-          <div className="stat-card dashboard-summary-card red">
+          <div className="stat-card dashboard-summary-card red" onClick={() => setShowLowStockPopup(true)} style={{ cursor: 'pointer' }}>
             <div className="stat-label">Low Stock Items</div>
             <div className="stat-value">{lowStock.length}</div>
             <div className="stat-sub">{products.filter((product) => product.stock === 0).length} out of stock</div>
@@ -301,7 +304,7 @@ export default function Dashboard({ db, user }) {
                 </tr>
               </thead>
               <tbody>
-                {bills.slice(0, 5).map((bill) => (
+                {todayBills.slice(0, 5).map((bill) => (
                   <tr key={bill.id}>
                     <td><b>{bill.billNo}</b></td>
                     <td>{bill.customer}</td>
@@ -310,13 +313,93 @@ export default function Dashboard({ db, user }) {
                     <td className="text-muted text-xs">{new Date(bill.date).toLocaleTimeString()}</td>
                   </tr>
                 ))}
-                {bills.length === 0 && (
+                {todayBills.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="text-center text-muted">No transactions yet</td>
+                    <td colSpan="5" className="text-center text-muted">No transactions today</td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {showLowStockPopup && (
+        <div className="modal-overlay open" onClick={() => setShowLowStockPopup(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ marginBottom: '15px' }}>
+              <h3 className="modal-title" style={{ margin: 0 }}>Low Stock Items</h3>
+              <button className="modal-close" onClick={() => setShowLowStockPopup(false)}>✕</button>
+            </div>
+            <div className="table-wrap" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Product</th>
+                    <th style={{ textAlign: 'right' }}>Stock</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lowStock.map(product => (
+                    <tr key={product.id}>
+                      <td>{product.code}</td>
+                      <td>{product.name}</td>
+                      <td style={{ textAlign: 'right' }} className="text-red fw-bold">{product.stock}</td>
+                    </tr>
+                  ))}
+                  {lowStock.length === 0 && (
+                    <tr>
+                      <td colSpan="3" className="text-center text-muted">No low stock items</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end mt-4">
+              <button className="btn btn-secondary" onClick={() => setShowLowStockPopup(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTodaySalesPopup && (
+        <div className="modal-overlay open" onClick={() => setShowTodaySalesPopup(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ marginBottom: '15px' }}>
+              <h3 className="modal-title" style={{ margin: 0 }}>Today's Sales</h3>
+              <button className="modal-close" onClick={() => setShowTodaySalesPopup(false)}>✕</button>
+            </div>
+            <div className="table-wrap" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Bill No</th>
+                    <th>Customer</th>
+                    <th style={{ textAlign: 'right' }}>Amount</th>
+                    <th style={{ textAlign: 'right' }}>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {todayBills.map((bill) => (
+                    <tr key={bill.id}>
+                      <td><b>{bill.billNo}</b></td>
+                      <td>{bill.customer}</td>
+                      <td style={{ textAlign: 'right' }} className="fw-bold">{formatCurrency(bill.grand)}</td>
+                      <td style={{ textAlign: 'right' }} className="text-muted text-xs">{new Date(bill.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                    </tr>
+                  ))}
+                  {todayBills.length === 0 && (
+                    <tr>
+                      <td colSpan="4" className="text-center text-muted">No sales today</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end mt-4">
+              <button className="btn btn-secondary" onClick={() => setShowTodaySalesPopup(false)}>Close</button>
+            </div>
           </div>
         </div>
       )}

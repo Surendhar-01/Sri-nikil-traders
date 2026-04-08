@@ -99,6 +99,44 @@
   white-space: nowrap;
 }
 
+.qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px;
+  background: #fff;
+}
+
+.qty-stepper-btn {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.qty-stepper-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.qty-stepper-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.qty-stepper-value {
+  min-width: 18px;
+  text-align: center;
+  font-weight: 600;
+}
+
 @media (max-width: 640px) {
   .billing-product-modal {
     width: 96vw;
@@ -108,4 +146,12 @@
     padding: 10px 12px;
     font-size: 0.92rem;
   }
+}
+.btn-review{
+  background-color: greenyellow;
+}
+.btn-review:hover{
+  background-color: greenyellow;
+  color: black;
+  border-color: greenyellow;
 }

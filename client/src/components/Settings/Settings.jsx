@@ -3,6 +3,11 @@ import './Settings.css';
 
 export default function Settings({ db, erp }) {
   const [showStaffModal, setShowStaffModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetTarget, setResetTarget] = useState('');
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
   const [newStaff, setNewStaff] = useState({ user: '', pass: '', role: 'Staff' });
   const [shopSettings, setShopSettings] = useState(() => db.settings);
   const [gstValue, setGstValue] = useState(() => String(db.settings?.gst ?? 0));
@@ -93,21 +98,43 @@ export default function Settings({ db, erp }) {
   };
 
   const resetStaffPassword = async (username) => {
-    const nextPassword = window.prompt(`Enter new password for ${username}:`);
-    if (!nextPassword || !nextPassword.trim()) {
+    setResetTarget(username);
+    setResetPasswordValue('');
+    setResetError('');
+    setShowResetModal(true);
+  };
+
+  const closeResetModal = () => {
+    if (isResetting) {
+      return;
+    }
+    setShowResetModal(false);
+    setResetTarget('');
+    setResetPasswordValue('');
+    setResetError('');
+  };
+
+  const handleConfirmResetPassword = async () => {
+    const nextPassword = resetPasswordValue.trim();
+    if (!nextPassword) {
+      setResetError('Password is required.');
       return;
     }
 
-    if (nextPassword.trim().length < 8) {
-      alert('Password must be at least 8 characters.');
+    if (nextPassword.length < 8) {
+      setResetError('Password must be at least 8 characters.');
       return;
     }
 
+    setIsResetting(true);
     try {
-      await erp.updateStaffPassword(username, nextPassword.trim());
-      alert(`Password updated for ${username}.`);
+      await erp.updateStaffPassword(resetTarget, nextPassword);
+      closeResetModal();
+      alert(`Password updated for ${resetTarget}.`);
     } catch (error) {
-      alert(error.message || 'Failed to update password');
+      setResetError(error.message || 'Failed to update password');
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -146,9 +173,9 @@ export default function Settings({ db, erp }) {
   };
 
   return (
-    <div className="grid grid-2">
-      <div>
-        <div className="card mb-4">
+    <div className="grid grid-2 settings-page">
+      <div className="settings-column">
+        <div className="card mb-4 settings-top-card settings-shop-card">
           <div className="section-title">Shop Details</div>
           <div className="form-group mb-2">
             <label>Shop Name</label>
@@ -179,10 +206,10 @@ export default function Settings({ db, erp }) {
               onChange={event => updateShopField('phone', event.target.value)}
             />
           </div>
-          <button className="btn btn-primary" onClick={handleSaveSettings}>Save Settings</button>
+          <button className="btn btn-primary" onClick={handleSaveSettings}>Update</button>
         </div>
 
-        <div className="card">
+        <div className="card settings-bottom-card settings-db-card">
           <div className="section-title">Database Tools</div>
           <div className="flex gap-2">
             <button className="btn btn-blue flex-1" onClick={backupDB}>Download Backup</button>
@@ -192,8 +219,8 @@ export default function Settings({ db, erp }) {
         </div>
       </div>
 
-      <div>
-        <div className="card mb-4">
+      <div className="settings-column">
+        <div className="card mb-4 settings-top-card settings-staff-card">
           <div className="settings-staff-header">
             <div>
               <div className="section-title" style={{ marginBottom: 6 }}>Staff Accounts</div>
@@ -202,12 +229,13 @@ export default function Settings({ db, erp }) {
             <button className="btn btn-primary btn-sm" onClick={() => setShowStaffModal(true)}>Add Staff</button>
           </div>
 
-          <div className="table-wrap mb-3">
+          <div className="table-wrap mb-3 settings-staff-table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>User</th>
                   <th>Role</th>
+                  <th>Password</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -224,7 +252,13 @@ export default function Settings({ db, erp }) {
                     </td>
                     <td>
                       <div className="flex gap-2">
+                        {account.user !== 'admin' && (
                         <button className="btn btn-secondary btn-sm" onClick={() => resetStaffPassword(account.user)}>Reset Password</button>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex gap-2">
                         {account.user !== 'admin' && (
                           <button className="settings-staff-delete" onClick={() => deleteStaff(account.user)}>Delete</button>
                         )}
@@ -237,9 +271,9 @@ export default function Settings({ db, erp }) {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card settings-bottom-card settings-gst-card">
           <div className="section-title">GST Context</div>
-          <div className="form-group mb-3">
+          <div className="form-group mb-2 settings-gst-row">
             <label>GST % (Global)</label>
             <input
               type="number"
@@ -293,6 +327,47 @@ export default function Settings({ db, erp }) {
             <div className="flex gap-2">
               <button className="btn btn-primary flex-1" onClick={addStaff}>Save Account</button>
               <button className="btn btn-secondary" type="button" onClick={() => setShowStaffModal(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showResetModal && (
+        <div className="modal-overlay open" onClick={closeResetModal}>
+          <div className="modal settings-reset-modal" onClick={event => event.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <div className="modal-title">Reset Password</div>
+                <div className="text-muted text-sm">Set a new password for <b>{resetTarget}</b>.</div>
+              </div>
+              <button className="modal-close" type="button" onClick={closeResetModal}>x</button>
+            </div>
+            <div className="form-group mb-3">
+              <label>New Password</label>
+              <input
+                type="password"
+                placeholder="Enter new password"
+                value={resetPasswordValue}
+                onChange={event => {
+                  setResetPasswordValue(event.target.value);
+                  setResetError('');
+                }}
+                autoFocus
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    handleConfirmResetPassword();
+                  }
+                }}
+              />
+            </div>
+            {resetError && (
+              <div className="text-red text-sm mb-3">{resetError}</div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button className="btn btn-primary" type="button" onClick={handleConfirmResetPassword} disabled={isResetting}>
+                {isResetting ? 'Updating...' : 'Update Password'}
+              </button>
+              <button className="btn btn-secondary" type="button" onClick={closeResetModal} disabled={isResetting}>Cancel</button>
             </div>
           </div>
         </div>

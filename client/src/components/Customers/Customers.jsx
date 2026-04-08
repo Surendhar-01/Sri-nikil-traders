@@ -11,97 +11,105 @@ export default function Customers({ db }) {
     const normalizedSearch = searchTerm.trim().toLowerCase();
     const customers = Array.isArray(db.customers) ? [...db.customers] : [];
 
-    // 1. Filter
     const filtered = customers.filter((customer) => {
-      // Search term (Name/Phone)
-      const matchesSearch = 
+      const matchesSearch =
         String(customer.name || '').toLowerCase().includes(normalizedSearch) ||
         String(customer.phone || '').includes(normalizedSearch);
-      
+
       if (!matchesSearch) return false;
 
-      // Date Range (Last Visit)
       const lastVisitStr = customer.lastVisit;
-      if (!startDate && !endDate) return true; // No date filter applied
+      if (!startDate && !endDate) return true;
+      if (!lastVisitStr) return false;
 
-      if (!lastVisitStr) return false; // Date filter applied but no visit date exists
-      
       const lastVisit = new Date(lastVisitStr);
       const afterStart = !startDate || lastVisit >= new Date(startDate);
-      const beforeEnd = !endDate || lastVisit <= new Date(endDate + 'T23:59:59');
+      const beforeEnd = !endDate || lastVisit <= new Date(`${endDate}T23:59:59`);
 
       return afterStart && beforeEnd;
     });
 
-    // 2. Sort
     return filtered.sort((a, b) => {
       if (sortBy === 'revenue-desc') return Number(b.total || 0) - Number(a.total || 0);
       if (sortBy === 'revenue-asc') return Number(a.total || 0) - Number(b.total || 0);
-      
+
       const dateA = new Date(a.lastVisit || 0);
       const dateB = new Date(b.lastVisit || 0);
       if (sortBy === 'visit-newest') return dateB - dateA;
       if (sortBy === 'visit-oldest') return dateA - dateB;
-      
+
       return 0;
     });
-
   }, [db.customers, searchTerm, startDate, endDate, sortBy]);
+
+  const totalCustomers = filteredAndSortedCustomers.length;
+  const totalRevenue = filteredAndSortedCustomers.reduce(
+    (sum, customer) => sum + Number(customer.total || 0),
+    0
+  );
 
   return (
     <div className="card customers-page">
-      <div className="flex flex-col gap-4 mb-4">
-        <div className="flex items-center justify-between gap-3 customers-header">
-          <div className="section-title customers-title" style={{ margin: 0, border: 'none' }}>Customer Database</div>
-          <div className="search-bar customers-search" style={{ flex: 1, maxWidth: '400px' }}>
-            <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by name or mobile number"
-            />
-          </div>
+      <div className="flex justify-between items-center mb-1 customers-header">
+        <div className="section-title customers-title" style={{ margin: 0, border: 'none' }}>
+          {'\u{1F465}'} Customer Database
         </div>
+        <div className="customers-stats text-sm">
+          <span className="text-muted">Total Customers: </span>
+          <b className="text-accent">{totalCustomers}</b>
+          <span className="text-muted ml-3"> | Amount: </span>
+          <b className="text-accent">Rs {totalRevenue.toFixed(2)}</b>
+        </div>
+      </div>
 
-        {/* New Filtration & Sorting Bar */}
-        <div className="flex flex-wrap items-end gap-3 no-print customers-filters">
-          <div className="control-group">
-            <label>Last Visit From</label>
-            <input 
-              type="date" 
-              className="form-control"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-            />
-          </div>
-          <div className="control-group">
-            <label>Last Visit To</label>
-            <input 
-              type="date" 
-              className="form-control"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-            />
-          </div>
-          <div className="control-group" style={{ minWidth: '180px' }}>
-            <label>Sort By</label>
-            <select 
-              className="form-control"
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value)}
-            >
-              <option value="revenue-desc">Total Revenue (High to Low)</option>
-              <option value="revenue-asc">Total Revenue (Low to High)</option>
-              <option value="visit-newest">Last Visit (Newest First)</option>
-              <option value="visit-oldest">Last Visit (Oldest First)</option>
-            </select>
-          </div>
+      <div className="customers-filters flex flex-wrap gap-3 mb-4 no-print">
+        <div className="control-group flex-1" style={{ minWidth: '220px' }}>
+          <label>Search Customer/Phone</label>
+          <input
+            type="text"
+            className="form-control"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Search..."
+          />
+        </div>
+        <div className="control-group">
+          <label>From Date</label>
+          <input
+            type="date"
+            className="form-control"
+            value={startDate}
+            onChange={(event) => setStartDate(event.target.value)}
+          />
+        </div>
+        <div className="control-group">
+          <label>To Date</label>
+          <input
+            type="date"
+            className="form-control"
+            value={endDate}
+            onChange={(event) => setEndDate(event.target.value)}
+          />
+        </div>
+        <div className="control-group" style={{ minWidth: '180px' }}>
+          <label>Sort By</label>
+          <select
+            className="form-control"
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value)}
+          >
+            <option value="visit-newest">Date (Newest First)</option>
+            <option value="visit-oldest">Date (Oldest First)</option>
+            <option value="revenue-desc">Revenue (High to Low)</option>
+            <option value="revenue-asc">Revenue (Low to High)</option>
+          </select>
         </div>
       </div>
 
       <div className="table-wrap customers-table">
         <table>
           <thead>
-            <tr><th>Name</th><th>Phone</th><th>Visits</th><th>Total Revenue</th><th>Last Visit</th><th>Type</th></tr>
+            <tr><th>Name</th><th>Phone</th><th>Visits</th><th>Total Purchases</th><th>Last Visit</th><th>Type</th></tr>
           </thead>
           <tbody>
             {filteredAndSortedCustomers.map((customer) => (
