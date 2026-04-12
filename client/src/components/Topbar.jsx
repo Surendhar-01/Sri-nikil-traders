@@ -47,7 +47,7 @@ export default function Topbar({ title, user, db }) {
 
       <div className="topbar-right">
         <button className="overall-report-btn" onClick={handleDownloadReport}>
-          <span>Overall Report</span>
+          <span>End shift</span>
           <span className="icon">📊</span>
         </button>
 
